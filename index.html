@@ -251,6 +251,7 @@
   .btn-primary:hover{background:#f0936a;}
   .btn-icon{width:38px;padding:0;justify-content:center;}
   .btn:disabled{opacity:.4;cursor:default;transform:none;}
+  #galAdd:disabled{opacity:1;background:var(--chip);color:var(--muted-on-glass);}
 
   /* hover tooltips for icon-only dock buttons */
   .dock [data-tip]{position:relative;}
@@ -290,6 +291,30 @@
   .confirm-yes{background:#d9534a;border-color:transparent;color:#fff;}
   .confirm-yes:hover{background:#c64238;}
 
+  /* guide trigger line under the gallery hint */
+  .guide-link{display:inline-flex;align-items:center;gap:6px;margin:-9px 0 15px;padding:0;border:0;background:none;color:var(--muted-on-glass);font-family:var(--ui);font-size:11.5px;line-height:1.45;text-align:left;cursor:pointer;transition:color .15s ease;}
+  .guide-link:hover{color:var(--text-on-glass);}
+  .guide-link span{text-decoration:underline;text-underline-offset:2px;text-decoration-color:rgba(255,255,255,.25);}
+  .guide-link svg{width:13px;height:13px;flex:none;}
+
+  /* Figma guide popup */
+  .guide-pop{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:rgba(10,10,12,.42);backdrop-filter:blur(3px);padding:24px;}
+  .guide-pop.open{display:flex;}
+  .guide-card{position:relative;background:var(--glass);border:1px solid var(--glass-line);border-radius:20px;padding:24px 26px;box-shadow:0 24px 60px -16px rgba(0,0,0,.55);backdrop-filter:blur(16px) saturate(140%);color:var(--text-on-glass);max-width:440px;width:100%;max-height:84vh;overflow:auto;}
+  .guide-close{position:absolute;top:14px;right:14px;width:28px;height:28px;border:0;border-radius:9px;background:rgba(255,255,255,.08);color:var(--text-on-glass);font-size:18px;line-height:1;cursor:pointer;transition:background .15s ease;}
+  .guide-close:hover{background:rgba(255,255,255,.18);}
+  .guide-title{font-family:var(--display);font-weight:400;font-size:23px;margin:0 0 5px;}
+  .guide-sub{margin:0 0 18px;font-size:13px;line-height:1.55;color:var(--muted-on-glass);max-width:90%;}
+  .guide-steps{margin:0;padding:0;list-style:none;counter-reset:gstep;display:flex;flex-direction:column;gap:14px;}
+  .guide-steps li{position:relative;counter-increment:gstep;padding-left:34px;font-size:13px;line-height:1.5;}
+  .guide-steps li::before{content:counter(gstep);position:absolute;left:0;top:0;width:23px;height:23px;border-radius:50%;background:var(--accent);color:#241008;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;}
+  .guide-steps li b{display:block;margin-bottom:2px;color:var(--text-on-glass);font-weight:600;}
+  .guide-steps li span{color:var(--muted-on-glass);}
+  .guide-steps li i{font-style:normal;color:var(--text-on-glass);}
+  .guide-steps li code{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:11.5px;background:rgba(255,255,255,.1);padding:1px 5px;border-radius:5px;color:var(--text-on-glass);}
+  .guide-foot{margin:20px 0 0;padding-top:16px;border-top:1px solid var(--glass-line);font-size:12.5px;line-height:1.55;color:var(--muted-on-glass);}
+  .guide-foot b{color:var(--text-on-glass);font-weight:600;}
+
   .dock{transition:opacity .35s ease;}
   .brand{transition:opacity .6s ease;}
   .ui-hidden{opacity:0;pointer-events:none;}
@@ -317,13 +342,16 @@
   .protocard:hover .thumb{transform:translateY(-3px);border-color:var(--accent);}
   .thumb iframe{position:absolute;top:0;left:0;width:375px;height:812px;border:0;transform:scale(.29333);transform-origin:top left;pointer-events:none;}
   .thumb .badge{position:absolute;left:0;right:0;bottom:0;padding:20px 7px 6px;font-size:9px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6);background:linear-gradient(180deg,transparent,rgba(0,0,0,.85));}
-  .trow{display:flex;align-items:center;justify-content:center;gap:3px;width:100%;}
+  .trow{display:flex;align-items:center;justify-content:center;gap:3px;width:100%;padding-left:19px;}
+  .trow:has(.prename){padding-left:0;}
   .ptitle{font-size:11.5px;color:var(--text-on-glass);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
   .pedit{flex:none;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;padding:0;border:0;background:none;color:var(--muted-on-glass);cursor:pointer;opacity:0;transition:opacity .15s ease,color .15s ease;}
+  .trow:has(.prename) .pedit{display:none;}
   .pedit svg{width:12px;height:12px;}
   .protocard:hover .pedit{opacity:.6;}
   .pedit:hover{opacity:1;color:var(--text-on-glass);}
-  .prename{flex:1 1 auto;text-align:center;background:rgba(255,255,255,.1);border:1px solid var(--accent);border-radius:7px;padding:1px 6px;outline:none;}
+  .prename{flex:1 1 auto;text-align:center;background:rgba(0,0,0,.25);border:1px solid var(--glass-line);border-radius:11px;padding:4px 8px;color:var(--text-on-glass);font-family:var(--ui);font-size:11.5px;outline:none;transition:border-color .15s ease;}
+  .prename:focus{border-color:rgba(255,255,255,.45);}
   .premove{position:absolute;top:7px;right:7px;width:21px;height:21px;border-radius:50%;background:rgba(0,0,0,.62);color:#fff;font-size:14px;line-height:21px;text-align:center;border:0;cursor:pointer;opacity:0;transition:opacity .15s;z-index:2;}
   .protocard:hover .premove{opacity:1;}
   .galempty{font-size:12.5px;color:var(--muted-on-glass);line-height:1.6;padding:6px 2px;}
@@ -423,6 +451,22 @@
     </div>
   </div>
 
+  <div class="guide-pop" id="guidePop" role="dialog" aria-modal="true" aria-label="Figma guide">
+    <div class="guide-card">
+      <button class="guide-close" id="guideClose" type="button" aria-label="Close">×</button>
+      <h3 class="guide-title">Figma prototype guide</h3>
+      <p class="guide-sub">Check these settings in Figma so your prototype displays correctly on the phone:</p>
+      <ol class="guide-steps">
+        <li><b>Sharing access</b><span>Open <i>Share</i> (top right) → set the link to <i>“Anyone with the link”</i> and <i>“can view”</i>.</span></li>
+        <li><b>No device frame</b><span>In prototype settings, set <i>Device</i> → <i>None</i>. PreMock adds the phone frame for you.</span></li>
+        <li><b>Scaling</b><span>In prototype <i>Settings</i> → <i>Scaling</i>, choose <i>“Scale down to fit width”</i>.</span></li>
+        <li><b>Starting frame</b><span>Make sure the correct <i>starting frame</i> is selected.</span></li>
+        <li><b>Hide Figma UI</b><span>In Present mode, open <i>Options</i> → enable <i>“Hide Figma UI”</i> (the link will include <code>hide-ui=1</code>).</span></li>
+      </ol>
+      <p class="guide-foot">After updating the settings, use <b>Share → Copy link</b> to copy the link again and paste it here.</p>
+    </div>
+  </div>
+
   <div class="dock ui-hidden">
     <div class="scenes" id="scenes">
       <button class="swatch sw-studio" data-scene="studio" aria-pressed="true" data-tip="Light Gray"></button>
@@ -472,10 +516,14 @@
 
   <div class="sheet" id="sheet">
     <h3>Prototype gallery</h3>
-    <p class="hint">Add a Claude Design or Figma prototype link, or paste HTML code. Tap a preview to open it on the phone.</p>
+    <p class="hint">Add a Figma prototype link, or paste HTML code. Tap a preview to open it on the phone.</p>
+    <button class="guide-link" id="guideLink" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+      <span>Follow the guide so Figma prototypes display correctly.</span>
+    </button>
     <div class="addrow">
       <input id="galInput" type="text" placeholder="Share link (https://...) or paste HTML" autocomplete="off">
-      <button class="btn btn-primary" id="galAdd">Add</button>
+      <button class="btn btn-primary" id="galAdd" disabled>Add</button>
     </div>
     <div class="grid" id="galGrid"></div>
     <div class="galempty" id="galEmpty">No prototypes yet. Paste a link above and press "Add".</div>
@@ -938,6 +986,8 @@
   const galGrid=document.getElementById('galGrid');
   const galEmpty=document.getElementById('galEmpty');
   const galInput=document.getElementById('galInput');
+  const galAdd=document.getElementById('galAdd');
+  const syncGalAdd=()=>{ galAdd.disabled=!galInput.value.trim(); };
 
   const store={
     async get(k){
@@ -1066,7 +1116,7 @@
   function addFromInput(){
     const it=classify(galInput.value);
     if(!it){ galInput.style.borderColor='#e36a5b'; setTimeout(()=>galInput.style.borderColor='',1200); return; }
-    items.unshift(it); galInput.value=''; persist(); render(); refreshFigmaTitle(it);
+    items.unshift(it); galInput.value=''; syncGalAdd(); persist(); render(); refreshFigmaTitle(it);
   }
   function syncSheet(){
     const dr=dock.getBoundingClientRect();
@@ -1078,12 +1128,24 @@
   window.addEventListener('resize', ()=>{ if(sheet.classList.contains('open')) syncSheet(); });
 
   document.getElementById('galleryBtn').addEventListener('click',()=>{ sheet.classList.contains('open')?closeSheet():openSheet(); });
-  document.getElementById('galAdd').addEventListener('click',addFromInput);
+  galAdd.addEventListener('click',addFromInput);
+  galInput.addEventListener('input',syncGalAdd);
   galInput.addEventListener('keydown',e=>{ if(e.key==='Enter') addFromInput(); });
+  syncGalAdd();
   document.addEventListener('keydown',e=>{ if(e.key==='Escape' && sheet.classList.contains('open')) closeSheet(); });
-  document.addEventListener('click',e=>{ if(sheet.classList.contains('open') && !sheet.contains(e.target) && !e.target.closest('#galleryBtn')) closeSheet(); });
+  document.addEventListener('click',e=>{ if(sheet.classList.contains('open') && !sheet.contains(e.target) && !e.target.closest('#galleryBtn') && !e.target.closest('#guidePop')) closeSheet(); });
 
-  (async()=>{ const saved=await store.get('gallery'); if(saved){ try{items=JSON.parse(saved)||[];}catch(e){} } render(); items.forEach(refreshFigmaTitle); })();
+  // Fixed example prototype — shown in the gallery by default (before anything is saved).
+  const DEFAULT_ITEMS=[
+    {...classify('https://www.figma.com/proto/vTmm4cHysm2Wjmtadi6fcL/B-M---App?node-id=547-3831&viewport=1057%2C511%2C0.28&t=S724q85d7QmIdY3U-8&scaling=scale-down-width&content-scaling=fixed&starting-point-node-id=547%3A3831&show-proto-sidebar=1&page-id=533%3A5123&hide-ui=1'), title:'Example', oembed:true}
+  ].filter(it=>it.type);
+  (async()=>{
+    const saved=await store.get('gallery');
+    if(saved){ try{items=JSON.parse(saved)||[];}catch(e){} }
+    // Ensure the fixed example is always present in the gallery (even after a prior save).
+    DEFAULT_ITEMS.forEach(def=>{ if(!items.some(it=>it.src===def.src)) items.unshift(def); });
+    render(); items.forEach(refreshFigmaTitle);
+  })();
 
   // save / remove the currently shown prototype to the gallery
   const saveBtn=document.getElementById('saveBtn');
@@ -1110,6 +1172,15 @@
     confirmPop.classList.remove('open');
     if(confirmResolve){ confirmResolve(val); confirmResolve=null; }
   }
+  // Figma guide popup
+  const guidePop=document.getElementById('guidePop');
+  const openGuide=()=>guidePop.classList.add('open');
+  const closeGuide=()=>guidePop.classList.remove('open');
+  document.getElementById('guideLink').addEventListener('click',e=>{ e.stopPropagation(); openGuide(); });
+  document.getElementById('guideClose').addEventListener('click',closeGuide);
+  guidePop.addEventListener('click',e=>{ if(e.target===guidePop) closeGuide(); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape' && guidePop.classList.contains('open')) closeGuide(); });
+
   document.getElementById('confirmYes').addEventListener('click',()=>closeConfirm(true));
   document.getElementById('confirmNo').addEventListener('click',()=>closeConfirm(false));
   confirmPop.addEventListener('click',e=>{ if(e.target===confirmPop) closeConfirm(false); });
