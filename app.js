@@ -226,13 +226,6 @@
     if(name){filename.textContent=cleanName;filepill.classList.add('show');}
     syncSaveBtn(); syncShareBtn();
   }
-  function clearPhone(){
-    frameLoader.classList.remove('show');
-    frame.removeAttribute('srcdoc'); frame.src='about:blank';
-    cursorShield.classList.remove('active');
-    empty.classList.remove('hidden'); filepill.classList.remove('show');
-    resetBtn.disabled=true; current=null; syncShareBtn();
-  }
   function restartPrototype(){
     if(!current) return;                                  // reload the shown prototype, don't return to selection
     if(current.type==='url') showURL(current.src,current.title);
@@ -271,6 +264,8 @@
 
   // scenes
   const cls={studio:'scene-studio',living:'scene-living',desk:'scene-desk'};
+  // drop the tick from the 3 preset swatches (used whenever a palette color or image takes over)
+  const clearPresetTicks=()=>document.querySelectorAll('.sw-studio,.sw-living,.sw-desk').forEach(s=>s.setAttribute('aria-pressed','false'));
   const paletteSwatch=document.querySelector('.sw-palette');
   const palettePopover=document.getElementById('palettePopover');
   const paletteColors=[
@@ -296,7 +291,7 @@
     paletteSwatch.classList.add('has-color');
     paletteActive=true;
     // a palette color is now active → drop the tick from the 3 preset swatches
-    document.querySelectorAll('.sw-studio,.sw-living,.sw-desk').forEach(s=>s.setAttribute('aria-pressed','false'));
+    clearPresetTicks();
     syncPaletteTicks();
     document.body.classList.toggle('dark',isDarkColor(color));
   }
@@ -425,7 +420,7 @@
     scene.className=''; scene.style.backgroundImage='url('+URL.createObjectURL(f)+')';
     document.body.classList.add('dark');
     customSwatch.classList.add('has-image');
-    document.querySelectorAll('.sw-studio,.sw-living,.sw-desk').forEach(s=>s.setAttribute('aria-pressed','false'));
+    clearPresetTicks();
     paletteSwatch.classList.remove('has-color');
     paletteActive=false; syncPaletteTicks();
   });
@@ -444,7 +439,7 @@
     scene.style.backgroundImage='url("'+src+'")';
     document.body.classList.toggle('dark',dark!==false);
     customSwatch.classList.add('has-image');
-    document.querySelectorAll('.sw-studio,.sw-living,.sw-desk').forEach(s=>s.setAttribute('aria-pressed','false'));
+    clearPresetTicks();
     paletteSwatch.classList.remove('has-color');
     paletteActive=false; syncPaletteTicks();
     renderBgTiles();
@@ -518,7 +513,7 @@
       const u=new URL(url);
       if(!/(^|\.)figma\.com$/i.test(u.hostname)) return null;
       if(u.pathname.startsWith('/embed')) return url;
-      return 'https://www.figma.com/embed?embed_host=goventis&url='+encodeURIComponent(url);
+      return 'https://www.figma.com/embed?embed_host=premock&url='+encodeURIComponent(url);
     }catch(e){
       return null;
     }
@@ -572,7 +567,7 @@
     if(raw.includes('<')) return {type:'html',src:raw};
     return null;
   }
-  function titleFor(it,i){
+  function titleFor(it,i=0){
     if(it.title) return it.title;
     if(it.provider==='figma'||figmaEmbedURL(it.src)) return 'Figma prototype '+(i+1);
     if(it.type==='url'){ try{const u=new URL(it.src);return (u.hostname.replace(/^www\./,'')+u.pathname).slice(0,42)||it.src;}catch(e){return it.src.slice(0,42);} }
