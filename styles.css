@@ -232,7 +232,7 @@
   .btn-icon{width:38px;padding:0;justify-content:center;}
   .btn:disabled{opacity:.4;cursor:default;transform:none;}
   /* record button */
-  #recBtn svg{color:#fff;width:17px;height:17px;}
+  #recBtn svg{color:var(--text-on-glass);width:17px;height:17px;}
   #recBtn.is-rec svg{color:#e5484d;width:20px;height:20px;}
   #recBtn.is-rec{background:rgba(229,72,77,.16);}
   #recBtn.is-rec:hover{background:rgba(229,72,77,.26);}
@@ -270,6 +270,15 @@
   .filepill .sharebtn[hidden]{display:none;}
   .filepill .sharebtn.copied{background:#3fa564;color:#fff;}
   .filepill .sharebtn.copied:hover{background:#359158;}
+  /* share → "Copied link": collapse the filename + bookmark, slide the label in */
+  /* Per-direction timing: fade OUT fast on the way in; on the way back, hold the name
+     hidden until the width has reopened, then fade IN — so it never reveals as a clipped "…". */
+  .filepill #filename{max-width:40vw;transition:max-width .26s cubic-bezier(.4,0,.2,1),opacity .15s ease .22s,margin .26s cubic-bezier(.4,0,.2,1);}
+  .filepill #saveBtn{max-width:24px;transition:max-width .26s cubic-bezier(.4,0,.2,1),opacity .15s ease .22s,margin .26s cubic-bezier(.4,0,.2,1),padding .26s cubic-bezier(.4,0,.2,1),background .15s ease,color .15s ease;}
+  .copied-label{display:inline-flex;align-items:center;max-width:0;opacity:0;margin-left:-8px;overflow:hidden;white-space:nowrap;color:var(--text-on-glass);font:500 12.5px var(--ui);transition:max-width .26s cubic-bezier(.4,0,.2,1),opacity .14s ease,margin .26s cubic-bezier(.4,0,.2,1);}
+  .filepill.is-copied #filename{max-width:0;opacity:0;margin-right:-8px;transition:max-width .26s cubic-bezier(.4,0,.2,1),opacity .14s ease,margin .26s cubic-bezier(.4,0,.2,1);}
+  .filepill.is-copied #saveBtn{max-width:0;opacity:0;margin:0 -8px 0 0;padding:0;transition:max-width .26s cubic-bezier(.4,0,.2,1),opacity .14s ease,margin .26s cubic-bezier(.4,0,.2,1),padding .26s cubic-bezier(.4,0,.2,1);}
+  .filepill.is-copied .copied-label{max-width:160px;opacity:1;margin-left:0;transition:max-width .26s cubic-bezier(.4,0,.2,1),opacity .2s ease .08s,margin .26s cubic-bezier(.4,0,.2,1);}
 
   .confirm-pop{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:rgba(10,10,12,.42);backdrop-filter:blur(3px);}
   .confirm-pop.open{display:flex;}

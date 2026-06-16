@@ -425,6 +425,7 @@
     scene.className=''; scene.style.backgroundImage='url('+URL.createObjectURL(f)+')';
     document.body.classList.add('dark');
     customSwatch.classList.add('has-image');
+    document.querySelectorAll('.sw-studio,.sw-living,.sw-desk').forEach(s=>s.setAttribute('aria-pressed','false'));
     paletteSwatch.classList.remove('has-color');
     paletteActive=false; syncPaletteTicks();
   });
@@ -443,6 +444,7 @@
     scene.style.backgroundImage='url("'+src+'")';
     document.body.classList.toggle('dark',dark!==false);
     customSwatch.classList.add('has-image');
+    document.querySelectorAll('.sw-studio,.sw-living,.sw-desk').forEach(s=>s.setAttribute('aria-pressed','false'));
     paletteSwatch.classList.remove('has-color');
     paletteActive=false; syncPaletteTicks();
     renderBgTiles();
@@ -698,15 +700,30 @@
   }
   const ICON_SHARE=shareBtn.innerHTML;
   const ICON_CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5 9 17 19.5 6.5"/></svg>';
-  let shareResetTimer;
+  const copiedLabel=filepill.querySelector('.copied-label');
+  let shareResetTimer, nameW=0, labelW=0;
   shareBtn.addEventListener('click',async()=>{
     if(!current) return;
     const link=buildShareLink();
-    try{ await navigator.clipboard.writeText(link); }
-    catch(e){ const ta=document.createElement('textarea'); ta.value=link; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(_){} ta.remove(); }
+    // Lock the real pixel widths so the name collapses and the label expands over the FULL
+    // duration in sync — animating max-width between content-sized values avoids the dead-zone
+    // wobble (pill ballooning) you get when max-width travels far past the actual content width.
+    nameW=filename.scrollWidth; labelW=copiedLabel.scrollWidth||110;
+    filename.style.maxWidth=nameW+'px'; copiedLabel.style.maxWidth='0px';
+    void filepill.offsetWidth;                 // commit the start widths before transitioning
+    // show feedback immediately — don't gate the UI on the clipboard promise resolving
+    filepill.classList.add('is-copied');
+    filename.style.maxWidth='0px'; copiedLabel.style.maxWidth=labelW+'px';
     shareBtn.classList.add('copied'); shareBtn.innerHTML=ICON_CHECK; shareBtn.title='Link copied!';
     clearTimeout(shareResetTimer);
-    shareResetTimer=setTimeout(()=>{ shareBtn.classList.remove('copied'); shareBtn.innerHTML=ICON_SHARE; shareBtn.title='Copy share link'; },1600);
+    shareResetTimer=setTimeout(()=>{
+      filepill.classList.remove('is-copied');
+      filename.style.maxWidth=nameW+'px'; copiedLabel.style.maxWidth='0px';   // animate back in sync
+      setTimeout(()=>{ filename.style.maxWidth=''; copiedLabel.style.maxWidth=''; },420);   // release the locks after the (delayed) fade-in completes
+      shareBtn.classList.remove('copied'); shareBtn.innerHTML=ICON_SHARE; shareBtn.title='Copy share link';
+    },1600);
+    try{ await navigator.clipboard.writeText(link); }
+    catch(e){ const ta=document.createElement('textarea'); ta.value=link; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(_){} ta.remove(); }
   });
   // Restore shared state on load (?proto=…): device → background → status bar → open prototype.
   function applyShared(){
