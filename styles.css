@@ -10,7 +10,7 @@
     --muted-on-glass:rgba(244,241,234,.55);
     --accent:#e8855b;
 
-    /* screen cutout measured from hand-test.png (768×1257, transparent screen hole) */
+    /* screen cutout measured from hand-ios.png (768×1257, transparent screen hole) */
     --imgW:768; --imgH:1257;
     --scrL:285px; --scrT:211px; --scrW:373px; --scrH:812px;
     --screen-radius:50px;  /* matches the iPhone screen corner in the photo */

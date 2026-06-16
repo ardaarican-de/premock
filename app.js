@@ -1,7 +1,7 @@
 (function(){
   // Device mockups — screen-hole geometry measured from each PNG (transparent cutout).
   const DEVICES={
-    ios:    {src:'hand-test.png', img:[768,1257], scr:[285,211,373,812]},
+    ios:    {src:'hand-ios.png',  img:[768,1257], scr:[285,211,373,812]},
     android:{src:'hand-and.png',  img:[778,1258], scr:[285,212,375,812]},
   };
   // iframe logical resolution — 375×812, shared by both devices.
