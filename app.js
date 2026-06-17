@@ -533,6 +533,7 @@
   // Ready-made background images — add your own here ({src, dark}). dark:true uses light UI chrome over the image.
   const presetBackgrounds=[
     { src:'home.png', dark:false },
+    { src:'office.png', dark:false },
   ];
   let selectedBg=null;
   function applyBackground(src,dark){
