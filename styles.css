@@ -58,6 +58,11 @@
     pointer-events:none; user-select:none; -webkit-user-drag:none;
   }
   body.statusbar-on .statusbar{display:block;}
+  /* Status bar content (clock, signal, wifi, battery) follows whatever sits behind it
+     on the phone screen: dark ink over light content, white ink over dark content.
+     JS toggles .on-dark from the live pixel/colour behind the bar. Notch stays black. */
+  .statusbar .sb-content{color:#000; transition:color .3s ease;}
+  .statusbar.on-dark .sb-content{color:#fff;}
 
   /* bottom-right menu — device switch + status bar in one glass bar */
   .right-dock{
@@ -109,6 +114,41 @@
   }
   body.statusbar-on .statusbar-toggle .sw{background:var(--accent);}
   body.statusbar-on .statusbar-toggle .sw::after{transform:translateX(14px);}
+
+  /* Status bar ink picker — floats above the toggle on hover (only while the bar is on).
+     Auto = detect from screen content (HTML) / scene tone (Figma); Light/Dark force it. */
+  .statusbar-control{position:relative;}
+  .sb-ink-pop{
+    position:absolute; left:50%; bottom:calc(100% + 10px); transform:translateX(-50%) translateY(6px);
+    display:flex; gap:2px; padding:3px;
+    border:1px solid var(--glass-line); border-radius:12px;
+    background:var(--glass); backdrop-filter:blur(16px) saturate(140%);
+    box-shadow:0 18px 40px -12px rgba(0,0,0,.5);
+    opacity:0; pointer-events:none; white-space:nowrap; z-index:5;
+    transition:opacity .18s ease, transform .18s ease;
+  }
+  /* invisible bridge across the gap so hover survives moving toggle → popup */
+  .sb-ink-pop::before{content:""; position:absolute; left:0; right:0; top:100%; height:12px;}
+  body.statusbar-on .statusbar-control:hover .sb-ink-pop,
+  body.statusbar-on .sb-ink-pop:hover{
+    opacity:1; pointer-events:auto; transform:translateX(-50%) translateY(0);
+  }
+  /* sliding highlight that glides to the active option */
+  .sb-ink-thumb{
+    position:absolute; left:0; top:0; z-index:0;
+    border-radius:9px; background:rgba(255,255,255,.18);
+    pointer-events:none;
+    transition:transform .28s cubic-bezier(.22,1,.36,1), width .28s cubic-bezier(.22,1,.36,1), height .28s cubic-bezier(.22,1,.36,1);
+  }
+  .sb-ink-opt{
+    position:relative; z-index:1;
+    appearance:none; border:0; background:transparent; cursor:pointer;
+    font-family:var(--ui); font-size:12px; font-weight:500;
+    color:var(--muted-on-glass); padding:5px 11px; border-radius:9px;
+    transition:color .18s ease;
+  }
+  .sb-ink-opt:hover{color:var(--text-on-glass);}
+  .sb-ink-opt.is-active{color:var(--text-on-glass);}
   .cursor-shield{position:absolute;inset:0;z-index:3;cursor:none;pointer-events:none;display:none;}
   .cursor-shield.active{display:block;pointer-events:auto;}
 

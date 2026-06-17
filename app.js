@@ -73,6 +73,7 @@
     cursorShield.style.pointerEvents = 'none';
     clearTimeout(wheelRestoreTimer);
     wheelRestoreTimer = setTimeout(restoreShield, 500);
+    scheduleInk();   // content under the status bar may have scrolled → re-check ink
   }, { passive: true });
 
   // Hide the top-left brand and bottom-left dock while the cursor is over the screen.
@@ -81,9 +82,84 @@
 
   // Status bar toggle (bottom-right) — overlay the iPhone status bar on the screen.
   const statusBarToggle=document.getElementById('statusBarToggle');
+  const statusBar=document.getElementById('statusBar');
   statusBarToggle.addEventListener('click',()=>{
     const on=document.body.classList.toggle('statusbar-on');
     statusBarToggle.setAttribute('aria-pressed',String(on));
+    updateStatusBarInk();
+  });
+
+  // Decide the status bar ink (black vs white) from what's actually behind the bar.
+  // 1) Read the live colour at the top of the prototype screen (same-origin srcdoc HTML).
+  //    A dark box under the bar → white ink; a light area → black ink. Re-runs on scroll.
+  // 2) Cross-origin prototypes (e.g. Figma) can't be read → fall back to the scene tone.
+  function parseRGB(s){
+    const m=String(s).match(/rgba?\(([^)]+)\)/i); if(!m) return null;
+    const p=m[1].split(',').map(v=>parseFloat(v));
+    return [p[0],p[1],p[2],p.length>3?p[3]:1];
+  }
+  function frameInkDark(){
+    let doc,win;
+    try{ doc=frame.contentDocument; win=frame.contentWindow; if(!doc||!doc.body||!win) return null; }
+    catch(e){ return null; }   // cross-origin → unreadable
+    // Sample the clock (left) and indicators (right) row; skip the centre (notch covers it).
+    const pts=[[40,24],[70,24],[300,24],[330,24],[352,24]];
+    let sum=0,n=0;
+    for(const [x,y] of pts){
+      let el; try{ el=doc.elementFromPoint(x,y); }catch(e){ continue; }
+      let node=el,rgb=null;
+      while(node && node.nodeType===1){
+        const c=parseRGB(win.getComputedStyle(node).backgroundColor);
+        if(c && c[3]>0){ rgb=c; break; }
+        node=node.parentElement;
+      }
+      if(!rgb) rgb=[255,255,255];   // no opaque bg up the tree → assume the white page
+      sum+=(rgb[0]*299+rgb[1]*587+rgb[2]*114)/1000; n++;
+    }
+    if(!n) return null;
+    return (sum/n)<140;
+  }
+  // 'auto' = detect from screen content (HTML) or scene tone (Figma); 'light'/'dark' force it.
+  const sbInkPop=document.getElementById('sbInkPop');
+  const sbInkThumb=document.getElementById('sbInkThumb');
+  let statusBarInk='auto';
+  // Glide the highlight to the active option (widths vary, so measure each time).
+  function moveInkThumb(){
+    const act=sbInkPop.querySelector('.sb-ink-opt.is-active'); if(!act) return;
+    sbInkThumb.style.width=act.offsetWidth+'px';
+    sbInkThumb.style.height=act.offsetHeight+'px';
+    sbInkThumb.style.transform='translate('+act.offsetLeft+'px,'+act.offsetTop+'px)';
+  }
+  function setStatusBarInk(mode){
+    statusBarInk=mode;
+    sbInkPop.querySelectorAll('.sb-ink-opt').forEach(x=>x.classList.toggle('is-active',x.dataset.ink===mode));
+    moveInkThumb();
+    updateStatusBarInk();
+  }
+  sbInkPop.addEventListener('click',e=>{
+    const b=e.target.closest('.sb-ink-opt'); if(b) setStatusBarInk(b.dataset.ink);
+  });
+  // Re-measure when the picker appears (fonts/layout settled) so the first glide is exact.
+  document.getElementById('statusBarControl').addEventListener('mouseenter',moveInkThumb);
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(moveInkThumb);
+  requestAnimationFrame(moveInkThumb);
+  function updateStatusBarInk(){
+    if(!document.body.classList.contains('statusbar-on')) return;
+    let dark;
+    if(statusBarInk==='light') dark=false;        // light background → dark icons
+    else if(statusBarInk==='dark') dark=true;     // dark background → white icons
+    else{                                         // auto
+      dark=frameInkDark();
+      if(dark===null) dark=document.body.classList.contains('dark');   // fallback: scene tone
+    }
+    statusBar.classList.toggle('on-dark',!!dark);
+  }
+  let inkRaf;
+  function scheduleInk(){ cancelAnimationFrame(inkRaf); inkRaf=requestAnimationFrame(updateStatusBarInk); }
+  // Re-evaluate when the prototype finishes loading and whenever its top scrolls.
+  frame.addEventListener('load',()=>{
+    setTimeout(updateStatusBarInk,60);
+    try{ frame.contentWindow.addEventListener('scroll',scheduleInk,{passive:true}); }catch(e){}
   });
 
   // Device switch (iOS / Android) — swaps the mockup image and refits the screen hole.
@@ -281,6 +357,29 @@
     const r=parseInt(raw.slice(0,2),16), g=parseInt(raw.slice(2,4),16), b=parseInt(raw.slice(4,6),16);
     return ((r*299 + g*587 + b*114) / 1000) < 150;
   }
+  // Sample the actual brightness of a background image (top band, where the status bar
+  // sits) and report whether it's dark, so the status bar / chrome ink can adapt
+  // automatically instead of relying on a hand-set flag. Falls back to dark on errors.
+  function detectImageDark(url,cb){
+    const img=new Image();
+    img.crossOrigin='anonymous';
+    img.onload=()=>{
+      try{
+        const w=40,h=40,c=document.createElement('canvas');
+        c.width=w; c.height=h;
+        const ctx=c.getContext('2d');
+        ctx.drawImage(img,0,0,w,h);
+        const band=Math.max(1,Math.round(h*0.3));   // top ~30% = where the status bar lives
+        const d=ctx.getImageData(0,0,w,band).data;
+        let sum=0,n=0;
+        for(let i=0;i<d.length;i+=4){ sum+=(d[i]*299+d[i+1]*587+d[i+2]*114)/1000; n++; }
+        cb((sum/n)<150);
+      }catch(err){ cb(true); }   // cross-origin / tainted canvas → assume dark (safe default)
+    };
+    img.onerror=()=>cb(true);
+    img.src=url;
+  }
+  function applyBgDark(url){ detectImageDark(url,dark=>{ document.body.classList.toggle('dark',dark); updateStatusBarInk(); }); }
   function setSolidScene(color,fromHex){
     selectedPaletteColor=color;
     if(!fromHex && typeof hexInput!=='undefined' && hexInput) hexInput.value=color.replace(/^#/,'');
@@ -294,6 +393,7 @@
     clearPresetTicks();
     syncPaletteTicks();
     document.body.classList.toggle('dark',isDarkColor(color));
+    updateStatusBarInk();
   }
   // tick the matching popover color only when a palette color is the active scene
   function syncPaletteTicks(){
@@ -396,6 +496,7 @@
     paletteSwatch.classList.remove('has-color');
     paletteActive=false; syncPaletteTicks();   // a preset is active → no palette tick
     document.body.classList.remove('dark');
+    updateStatusBarInk();
   }
   document.getElementById('scenes').addEventListener('click',e=>{
     const b=e.target.closest('.swatch'); if(!b) return;
@@ -417,8 +518,9 @@
   bgInput.addEventListener('change',e=>{
     const f=e.target.files[0]; if(!f) return;
     selectedBg=null;
-    scene.className=''; scene.style.backgroundImage='url('+URL.createObjectURL(f)+')';
-    document.body.classList.add('dark');
+    const url=URL.createObjectURL(f);
+    scene.className=''; scene.style.backgroundImage='url('+url+')';
+    applyBgDark(url);   // auto: light image → dark ink, dark image → white ink
     customSwatch.classList.add('has-image');
     clearPresetTicks();
     paletteSwatch.classList.remove('has-color');
@@ -437,7 +539,8 @@
     selectedBg=src;
     scene.className=''; scene.style.backgroundColor='';
     scene.style.backgroundImage='url("'+src+'")';
-    document.body.classList.toggle('dark',dark!==false);
+    document.body.classList.toggle('dark',dark!==false);   // instant default from the flag…
+    applyBgDark(src);   // …then refine from the image's real brightness
     customSwatch.classList.add('has-image');
     clearPresetTicks();
     paletteSwatch.classList.remove('has-color');
@@ -690,6 +793,7 @@
     if(current.title) p.set('title', current.title);
     p.set('device', currentDevice);
     if(document.body.classList.contains('statusbar-on')) p.set('statusbar','1');
+    if(statusBarInk!=='auto') p.set('sbink', statusBarInk);
     p.set('bg', getBgState());
     return location.origin+location.pathname+'?'+p.toString();
   }
@@ -727,6 +831,7 @@
     if(q.get('device')==='android') setDevice('android');
     applyBgState(q.get('bg'));
     if(q.get('statusbar')==='1'){ document.body.classList.add('statusbar-on'); statusBarToggle.setAttribute('aria-pressed','true'); }
+    { const ink=q.get('sbink'); if(ink==='light'||ink==='dark') setStatusBarInk(ink); }
     showURL(proto, q.get('title')||undefined);
   }
 
