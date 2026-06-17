@@ -363,19 +363,35 @@
   /* Figma guide popup */
   .guide-pop{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:rgba(10,10,12,.42);backdrop-filter:blur(3px);padding:24px;}
   .guide-pop.open{display:flex;}
-  .guide-card{position:relative;background:var(--glass);border:1px solid var(--glass-line);border-radius:20px;padding:24px 26px;box-shadow:0 24px 60px -16px rgba(0,0,0,.55);backdrop-filter:blur(16px) saturate(140%);color:var(--text-on-glass);max-width:440px;width:100%;max-height:84vh;overflow:auto;}
+  .guide-card{position:relative;background:var(--glass);border:1px solid var(--glass-line);border-radius:20px;padding:20px 24px;box-shadow:0 24px 60px -16px rgba(0,0,0,.55);backdrop-filter:blur(16px) saturate(140%);color:var(--text-on-glass);max-width:540px;width:100%;max-height:90vh;overflow:auto;}
   .guide-close{position:absolute;top:14px;right:14px;width:28px;height:28px;border:0;border-radius:9px;background:rgba(255,255,255,.08);color:var(--text-on-glass);font-size:18px;line-height:1;cursor:pointer;transition:background .15s ease;}
   .guide-close:hover{background:rgba(255,255,255,.18);}
   .guide-title{font-family:var(--display);font-weight:400;font-size:23px;margin:0 0 5px;}
-  .guide-sub{margin:0 0 18px;font-size:13px;line-height:1.55;color:var(--muted-on-glass);max-width:90%;}
-  .guide-steps{margin:0;padding:0;list-style:none;counter-reset:gstep;display:flex;flex-direction:column;gap:14px;}
-  .guide-steps li{position:relative;counter-increment:gstep;padding-left:34px;font-size:13px;line-height:1.5;}
-  .guide-steps li::before{content:counter(gstep);position:absolute;left:0;top:0;width:23px;height:23px;border-radius:50%;background:var(--accent);color:#241008;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;}
+  .guide-sub{margin:0 0 14px;font-size:13px;line-height:1.5;color:var(--muted-on-glass);max-width:90%;}
+  .guide-steps{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:11px;}
+  .guide-steps li{display:flex;align-items:center;gap:13px;font-size:12.5px;line-height:1.45;}
+  .guide-shot{flex:0 0 128px;width:128px;aspect-ratio:321/207;object-fit:cover;border-radius:11px;border:1px solid var(--glass-line);display:block;}
+  .guide-text{min-width:0;}
   .guide-steps li b{display:block;margin-bottom:2px;color:var(--text-on-glass);font-weight:600;}
   .guide-steps li span{color:var(--muted-on-glass);}
   .guide-steps li i{font-style:normal;color:var(--text-on-glass);}
   .guide-steps li code{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:11.5px;background:rgba(255,255,255,.1);padding:1px 5px;border-radius:5px;color:var(--text-on-glass);}
-  .guide-foot{margin:20px 0 0;padding-top:16px;border-top:1px solid var(--glass-line);font-size:12.5px;line-height:1.55;color:var(--muted-on-glass);}
+  .guide-foot{margin:14px 0 0;padding-top:13px;border-top:1px solid var(--glass-line);font-size:12.5px;line-height:1.5;color:var(--muted-on-glass);}
+
+  /* Onboarding welcome card (top-right, first visit) */
+  .welcome-pop{position:fixed;z-index:58;top:22px;right:22px;width:340px;max-width:calc(100vw - 44px);opacity:0;pointer-events:none;transform:translateX(40px);transition:opacity .45s ease,transform .45s cubic-bezier(.22,1,.36,1);}
+  .welcome-pop.open{opacity:1;pointer-events:auto;transform:none;}
+  .welcome-card{position:relative;background:var(--glass);border:1px solid var(--glass-line);border-radius:18px;padding:18px 18px 16px;box-shadow:0 24px 60px -16px rgba(0,0,0,.55);backdrop-filter:blur(16px) saturate(140%);color:var(--text-on-glass);}
+  .welcome-close{position:absolute;top:11px;right:11px;width:26px;height:26px;border:0;border-radius:8px;background:rgba(255,255,255,.08);color:var(--text-on-glass);font-size:17px;line-height:1;cursor:pointer;transition:background .15s ease;}
+  .welcome-close:hover{background:rgba(255,255,255,.18);}
+  .welcome-row{display:flex;align-items:center;gap:13px;padding-right:20px;}
+  .welcome-video{flex:0 0 116px;width:116px;aspect-ratio:16/10;border-radius:12px;overflow:hidden;background:rgba(0,0,0,.3);border:1px solid var(--glass-line);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.85);}
+  .welcome-video video{width:100%;height:100%;object-fit:cover;display:block;}
+  .welcome-play{width:34px;height:34px;}
+  .welcome-head{min-width:0;}
+  .welcome-title{font-family:var(--display);font-weight:400;font-size:18px;margin:0 0 3px;line-height:1.2;}
+  .welcome-hi{margin:0;font-size:12.5px;line-height:1.4;color:var(--muted-on-glass);}
+  .welcome-desc{margin:13px 0 0;font-size:12.5px;line-height:1.55;color:var(--muted-on-glass);}
   .guide-foot b{color:var(--text-on-glass);font-weight:600;}
 
   .ui-hidden{opacity:0;pointer-events:none;}

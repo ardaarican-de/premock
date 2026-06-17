@@ -891,6 +891,23 @@
   guidePop.addEventListener('click',e=>{ if(e.target===guidePop) closeGuide(); });
   document.addEventListener('keydown',e=>{ if(e.key==='Escape' && guidePop.classList.contains('open')) closeGuide(); });
 
+  // Onboarding welcome card — shows once on first visit
+  const welcomePop=document.getElementById('welcomePop');
+  if(welcomePop){
+    const closeWelcome=()=>{ welcomePop.classList.remove('open'); store.set('welcomeSeen','1'); };
+    document.getElementById('welcomeClose').addEventListener('click',closeWelcome);
+    document.addEventListener('keydown',e=>{ if(e.key==='Escape' && welcomePop.classList.contains('open')) closeWelcome(); });
+    // Auto-close if the file/bookmark pill appears in the same top-right region
+    if(filepill){
+      new MutationObserver(()=>{ if(filepill.classList.contains('show') && welcomePop.classList.contains('open')) closeWelcome(); })
+        .observe(filepill,{attributes:true,attributeFilter:['class']});
+    }
+    (async()=>{
+      const seen=await store.get('welcomeSeen');
+      if(!seen) setTimeout(()=>welcomePop.classList.add('open'),5200);
+    })();
+  }
+
   document.getElementById('confirmYes').addEventListener('click',()=>closeConfirm(true));
   document.getElementById('confirmNo').addEventListener('click',()=>closeConfirm(false));
   confirmPop.addEventListener('click',e=>{ if(e.target===confirmPop) closeConfirm(false); });
