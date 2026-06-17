@@ -259,6 +259,21 @@
   });
   window.addEventListener("mouseup",()=>{ clearTimeout(pressTimer); customCursor.classList.remove("pressed"); });
 
+  // Hide every scrollbar inside the preview — light DOM and shadow roots alike.
+  // The srcdoc style covers the light DOM, but `*` can't pierce web-component
+  // shadow trees, so we walk them and inject there too (srcdoc is same-origin).
+  const SB_CSS="*{scrollbar-width:none!important;-ms-overflow-style:none!important;}*::-webkit-scrollbar{display:none!important;width:0!important;height:0!important;}";
+  function hideScrollbars(root){
+    try{
+      const s=(root.ownerDocument||root).createElement("style");
+      s.textContent=SB_CSS;
+      (root.head||root).appendChild(s);
+    }catch(e){}
+    try{
+      root.querySelectorAll("*").forEach(el=>{ if(el.shadowRoot) hideScrollbars(el.shadowRoot); });
+    }catch(e){}
+  }
+
   function attachFrameCursor(){
     try{
       const doc=frame.contentDocument;
@@ -266,7 +281,9 @@
       const style=doc.createElement("style");
       style.textContent="*{cursor:none!important;}";
       doc.head.appendChild(style);
+      hideScrollbars(doc);
       requestAnimationFrame(()=>{
+        hideScrollbars(doc);
         const target=doc.querySelector("#root,#__next,body>main:first-of-type,body>div:first-of-type");
         if(!target) return;
         const rect=target.getBoundingClientRect();
@@ -291,7 +308,7 @@
   let current=null;
 
   function fixedPreviewHTML(html){
-    const fixedStyle="<style data-preview-fixed-height>html,body{width:"+VIEWPORT_W+"px!important;height:"+PREVIEW_H+"px!important;min-height:"+PREVIEW_H+"px!important;margin:0!important;padding:0!important;overflow:hidden!important;}body{position:relative!important;display:flex!important;align-items:center!important;justify-content:center!important;background:#fff!important;}body>div:first-of-type,body>main:first-of-type,#root,#__next{width:100%!important;height:100%!important;min-height:100%!important;margin:0!important;padding:0!important;flex:none!important;max-width:none!important;transform-origin:center center!important;overflow:hidden!important;}#root>div:first-child,#__next>div:first-child,body>div:first-of-type>div:first-child{margin:0!important;padding:0!important;}*{cursor:none!important;}</style>";
+    const fixedStyle="<style data-preview-fixed-height>html,body{width:"+VIEWPORT_W+"px!important;height:"+PREVIEW_H+"px!important;min-height:"+PREVIEW_H+"px!important;margin:0!important;padding:0!important;overflow:hidden!important;}body{position:relative!important;display:flex!important;align-items:center!important;justify-content:center!important;background:#fff!important;}body>div:first-of-type,body>main:first-of-type,#root,#__next{width:100%!important;height:100%!important;min-height:100%!important;margin:0!important;padding:0!important;flex:none!important;max-width:none!important;transform-origin:center center!important;overflow:hidden!important;}#root>div:first-child,#__next>div:first-child,body>div:first-of-type>div:first-child{margin:0!important;padding:0!important;}*{cursor:none!important;}*{scrollbar-width:none!important;-ms-overflow-style:none!important;}*::-webkit-scrollbar{display:none!important;width:0!important;height:0!important;}</style>";
     return /<\/head>/i.test(html) ? html.replace(/<\/head>/i,fixedStyle+'</head>') : fixedStyle+html;
   }
 
@@ -488,7 +505,6 @@
   palettePopover.addEventListener('click',e=>{
     const colorBtn=e.target.closest('.palette-color'); if(!colorBtn) return;
     setSolidScene(colorBtn.dataset.color);
-    closePalette();
   });
   // close when the cursor leaves the popover (same as the gallery sheet)
   palettePopover.addEventListener('mouseleave',()=>{ if(palettePopover.classList.contains('open')) closePalette(); });
@@ -556,7 +572,8 @@
     clearPresetTicks();
     paletteSwatch.classList.remove('has-color');
     paletteActive=false; syncPaletteTicks();
-    renderBgTiles();
+    // update active tile state in place (rebuilding innerHTML would drop the clicked node mid-event)
+    bgPopover.querySelectorAll('.bg-tile').forEach(t=>t.setAttribute('aria-pressed',String(t.dataset.src===selectedBg)));
   }
   function renderBgTiles(){
     const tiles=presetBackgrounds.map(bg=>'<button class="bg-tile" type="button" data-src="'+bg.src+'" data-dark="'+(bg.dark!==false)+'" aria-pressed="'+String(bg.src===selectedBg)+'" style="background-image:url(\''+bg.src+'\')"></button>').join('');
@@ -578,9 +595,8 @@
     if(e.target.closest('#bgUploadTile')){ closeBg(); bgInput.click(); return; }
     const tile=e.target.closest('.bg-tile'); if(!tile) return;
     applyBackground(tile.dataset.src, tile.dataset.dark!=='false');
-    closeBg();
   });
-  // close when the cursor leaves the popover (same as the gallery sheet)
+  // close when the cursor leaves the popover (same as the gallery sheet / palette)
   bgPopover.addEventListener('mouseleave',()=>{ if(bgPopover.classList.contains('open')) closeBg(); });
   // hovering a different dock button closes an open popover so its tooltip stays readable
   document.querySelector('.dock').addEventListener('mouseover',e=>{
@@ -703,7 +719,7 @@
       const thumb=document.createElement('div'); thumb.className='thumb';
       const f=document.createElement('iframe');
       f.setAttribute('sandbox','allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-popups');
-      if(it.type==='url') f.src=displaySrcFor(it); else f.srcdoc=it.src;
+      if(it.type==='url') f.src=displaySrcFor(it); else f.srcdoc=fixedPreviewHTML(it.src);
       thumb.appendChild(f);
       const badge=document.createElement('span'); badge.className='badge';
       badge.textContent=(it.provider==='figma'||figmaEmbedURL(it.src))?'figma':(it.type==='url'?'link':'html');
