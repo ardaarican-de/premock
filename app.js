@@ -289,8 +289,13 @@
         const rect=target.getBoundingClientRect();
         if(!rect.width||!rect.height) return;
         const cover=Math.max(VIEWPORT_W/rect.width,PREVIEW_H/rect.height,1);
-        target.style.transformOrigin="center center";
-        target.style.transform="scale("+cover+")";
+        // Only scale up prototypes that don't already fill the frame. A transform makes
+        // the root a containing block and re-anchors position:fixed/sticky nav bars to it
+        // (they'd slide to the bottom of tall content), so skip it when no scaling is needed.
+        if(cover>1.005){
+          target.style.transformOrigin="center center";
+          target.style.transform="scale("+cover+")";
+        }
       });
       doc.addEventListener("mousemove",e=>{
         const rect=frame.getBoundingClientRect();
@@ -308,7 +313,7 @@
   let current=null;
 
   function fixedPreviewHTML(html){
-    const fixedStyle="<style data-preview-fixed-height>html,body{width:"+VIEWPORT_W+"px!important;height:"+PREVIEW_H+"px!important;min-height:"+PREVIEW_H+"px!important;margin:0!important;padding:0!important;overflow:hidden!important;}body{position:relative!important;display:flex!important;align-items:center!important;justify-content:center!important;background:#fff!important;}body>div:first-of-type,body>main:first-of-type,#root,#__next{width:100%!important;height:100%!important;min-height:100%!important;margin:0!important;padding:0!important;flex:none!important;max-width:none!important;transform-origin:center center!important;overflow:hidden!important;}#root>div:first-child,#__next>div:first-child,body>div:first-of-type>div:first-child{margin:0!important;padding:0!important;}*{cursor:none!important;}*{scrollbar-width:none!important;-ms-overflow-style:none!important;}*::-webkit-scrollbar{display:none!important;width:0!important;height:0!important;}</style>";
+    const fixedStyle="<style data-preview-fixed-height>html,body{width:"+VIEWPORT_W+"px!important;height:"+PREVIEW_H+"px!important;min-height:"+PREVIEW_H+"px!important;margin:0!important;padding:0!important;overflow:hidden!important;}body{position:relative!important;display:flex!important;align-items:center!important;justify-content:center!important;background:#fff!important;}body>div:first-of-type,body>main:first-of-type,#root,#__next{width:100%!important;height:100%!important;min-height:100%!important;margin:0!important;padding:0!important;flex:none!important;max-width:none!important;transform-origin:center center!important;overflow-y:auto!important;overflow-x:hidden!important;}#root>div:first-child,#__next>div:first-child,body>div:first-of-type>div:first-child{margin:0!important;padding:0!important;}*{cursor:none!important;}*{scrollbar-width:none!important;-ms-overflow-style:none!important;}*::-webkit-scrollbar{display:none!important;width:0!important;height:0!important;}</style>";
     return /<\/head>/i.test(html) ? html.replace(/<\/head>/i,fixedStyle+'</head>') : fixedStyle+html;
   }
 
@@ -775,15 +780,20 @@
   // close the gallery when the cursor leaves the sheet (but not while a confirm dialog is up)
   sheet.addEventListener('mouseleave',()=>{ if(sheet.classList.contains('open') && !confirmPop.classList.contains('open')) closeSheet(); });
 
-  // Fixed example prototype — shown in the gallery by default (before anything is saved).
-  const DEFAULT_ITEMS=[
-    {...classify('https://www.figma.com/proto/vTmm4cHysm2Wjmtadi6fcL/B-M---App?node-id=547-3831&viewport=1057%2C511%2C0.28&t=S724q85d7QmIdY3U-8&scaling=scale-down-width&content-scaling=fixed&starting-point-node-id=547%3A3831&show-proto-sidebar=1&page-id=533%3A5123&hide-ui=1'), title:'Example', oembed:true}
-  ].filter(it=>it.type);
+  // Fixed example prototypes — shown in the gallery by default (before anything is saved).
+  // The HTML one ships in example-prototype.js as a <script> so it works on file:// without
+  // a server (a fetch would be CORS-blocked there); the Figma one is a hosted prototype link.
+  const FIGMA_EXAMPLE={...classify('https://www.figma.com/proto/vTmm4cHysm2Wjmtadi6fcL/B-M---App?node-id=547-3831&viewport=1057%2C511%2C0.28&t=S724q85d7QmIdY3U-8&scaling=scale-down-width&content-scaling=fixed&starting-point-node-id=547%3A3831&show-proto-sidebar=1&page-id=533%3A5123&hide-ui=1'), title:'Figma Example', oembed:true};
   (async()=>{
     const saved=await store.get('gallery');
     if(saved){ try{items=JSON.parse(saved)||[];}catch(e){} }
-    // Ensure the fixed example is always present in the gallery (even after a prior save).
-    DEFAULT_ITEMS.forEach(def=>{ if(!items.some(it=>it.src===def.src)) items.unshift(def); });
+    // Ensure both fixed examples are present in the gallery (even after a prior save).
+    if(FIGMA_EXAMPLE.type && !items.some(it=>it.src===FIGMA_EXAMPLE.src)){
+      items.unshift(FIGMA_EXAMPLE);
+    }
+    if(window.__EXAMPLE_HTML__ && !items.some(it=>it.example)){
+      items.unshift({type:'html', src:window.__EXAMPLE_HTML__, title:'Example', example:true});
+    }
     render(); items.forEach(refreshFigmaTitle);
   })();
 
