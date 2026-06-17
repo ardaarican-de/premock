@@ -123,6 +123,7 @@
   const sbInkPop=document.getElementById('sbInkPop');
   const sbInkThumb=document.getElementById('sbInkThumb');
   let statusBarInk='auto';
+  let userPickedInk=false;   // true once the user (or a shared link) explicitly sets a mode
   // Glide the highlight to the active option (widths vary, so measure each time).
   function moveInkThumb(){
     const act=sbInkPop.querySelector('.sb-ink-opt.is-active'); if(!act) return;
@@ -130,15 +131,18 @@
     sbInkThumb.style.height=act.offsetHeight+'px';
     sbInkThumb.style.transform='translate('+act.offsetLeft+'px,'+act.offsetTop+'px)';
   }
-  function setStatusBarInk(mode){
+  function setStatusBarInk(mode,manual){
     statusBarInk=mode;
+    if(manual) userPickedInk=true;
     sbInkPop.querySelectorAll('.sb-ink-opt').forEach(x=>x.classList.toggle('is-active',x.dataset.ink===mode));
     moveInkThumb();
     updateStatusBarInk();
   }
   sbInkPop.addEventListener('click',e=>{
-    const b=e.target.closest('.sb-ink-opt'); if(b) setStatusBarInk(b.dataset.ink);
+    const b=e.target.closest('.sb-ink-opt'); if(b) setStatusBarInk(b.dataset.ink,true);
   });
+  // A loaded prototype goes back to Auto detection unless the user explicitly chose a mode.
+  function resetInkForPrototype(){ if(!userPickedInk) setStatusBarInk('auto'); }
   // Re-measure when the picker appears (fonts/layout settled) so the first glide is exact.
   document.getElementById('statusBarControl').addEventListener('mouseenter',moveInkThumb);
   if(document.fonts && document.fonts.ready) document.fonts.ready.then(moveInkThumb);
@@ -152,7 +156,7 @@
       dark=frameInkDark();
       if(dark===null) dark=document.body.classList.contains('dark');   // fallback: scene tone
     }
-    statusBar.classList.toggle('on-dark',!!dark);
+    document.body.classList.toggle('sb-on-dark',!!dark);
   }
   let inkRaf;
   function scheduleInk(){ cancelAnimationFrame(inkRaf); inkRaf=requestAnimationFrame(updateStatusBarInk); }
@@ -185,6 +189,7 @@
   // Apply a device mockup: swap the image, recompute geometry + CSS vars, reflow.
   function applyDevice(name){
     const d=DEVICES[name]; if(!d) return;
+    document.body.classList.toggle('android',name==='android');   // swaps iOS/Android status bar
     [IMG_W,IMG_H]=d.img;
     [SCR_L,SCR_T,SCR_W,SCR_H]=d.scr;
     SCR_CX=SCR_L+SCR_W/2; SCR_CY=SCR_T+SCR_H/2;
@@ -297,6 +302,7 @@
     cursorShield.classList.remove('active');
     empty.classList.add('hidden');
     resetBtn.disabled=false;
+    resetInkForPrototype();
     const cleanName=(name||'Prototype').replace(/\.html?$/i,'');
     current={type:'html',src:html,title:cleanName};
     if(name){filename.textContent=cleanName;filepill.classList.add('show');}
@@ -586,6 +592,7 @@
     frame.removeAttribute('srcdoc'); frame.src=displaySrcFor({type:'url',src:url});
     cursorShield.classList.add('active');
     empty.classList.add('hidden'); resetBtn.disabled=false;
+    resetInkForPrototype();
     current={type:'url',src:url,title:title||url};
     filename.textContent=title||url; filepill.classList.add('show');
     syncSaveBtn(); syncShareBtn();
@@ -799,9 +806,10 @@
     return location.origin+location.pathname+'?'+p.toString();
   }
   const ICON_SHARE=shareBtn.innerHTML;
+  const ICON_LINK='<svg class="ico-link" viewBox="2.8 2.8 18.4 18.4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13.229C10.1416 13.4609 10.3097 13.6804 10.5042 13.8828C11.7117 15.1395 13.5522 15.336 14.9576 14.4722C15.218 14.3121 15.4634 14.1157 15.6872 13.8828L18.9266 10.5114C20.3578 9.02184 20.3578 6.60676 18.9266 5.11718C17.4953 3.6276 15.1748 3.62761 13.7435 5.11718L13.03 5.85978"/><path d="M10.9703 18.14L10.2565 18.8828C8.82526 20.3724 6.50471 20.3724 5.07345 18.8828C3.64218 17.3932 3.64218 14.9782 5.07345 13.4886L8.31287 10.1172C9.74413 8.62761 12.0647 8.6276 13.4959 10.1172C13.6904 10.3195 13.8584 10.539 14 10.7708"/></svg>';
   const ICON_CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5 9 17 19.5 6.5"/></svg>';
   const copiedLabel=filepill.querySelector('.copied-label');
-  let shareResetTimer, nameW=0, labelW=0;
+  let shareResetTimer, shareIconTimer, nameW=0, labelW=0;
   shareBtn.addEventListener('click',async()=>{
     if(!current) return;
     const link=buildShareLink();
@@ -814,26 +822,43 @@
     // show feedback immediately — don't gate the UI on the clipboard promise resolving
     filepill.classList.add('is-copied');
     filename.style.maxWidth='0px'; copiedLabel.style.maxWidth=labelW+'px';
-    shareBtn.classList.add('copied'); shareBtn.innerHTML=ICON_CHECK; shareBtn.title='Link copied!';
+    // show the link/chain icon first; hold it ~2s, then smoothly cross-fade to the tick
+    shareBtn.classList.remove('swapping');
+    shareBtn.classList.add('copied'); shareBtn.innerHTML=ICON_LINK; shareBtn.title='Link copied!';
+    clearTimeout(shareIconTimer);
+    shareIconTimer=setTimeout(()=>{
+      shareBtn.classList.add('swapping');               // fade the chain out
+      shareIconTimer=setTimeout(()=>{                   // then swap → the tick fades in
+        shareBtn.innerHTML=ICON_CHECK; shareBtn.classList.remove('swapping');
+      },90);
+    },1000);
     clearTimeout(shareResetTimer);
     shareResetTimer=setTimeout(()=>{
       filepill.classList.remove('is-copied');
       filename.style.maxWidth=nameW+'px'; copiedLabel.style.maxWidth='0px';   // animate back in sync
       setTimeout(()=>{ filename.style.maxWidth=''; copiedLabel.style.maxWidth=''; },420);   // release the locks after the (delayed) fade-in completes
-      shareBtn.classList.remove('copied'); shareBtn.innerHTML=ICON_SHARE; shareBtn.title='Copy share link';
-    },1600);
+      shareBtn.classList.remove('copied','swapping'); shareBtn.innerHTML=ICON_SHARE; shareBtn.title='Copy share link';
+    },3400);
     try{ await navigator.clipboard.writeText(link); }
     catch(e){ const ta=document.createElement('textarea'); ta.value=link; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(_){} ta.remove(); }
   });
   // Restore shared state on load (?proto=…): device → background → status bar → open prototype.
   function applyShared(){
     const q=new URLSearchParams(location.search);
-    const proto=q.get('proto'); if(!proto) return;
+    const proto=q.get('proto'); if(!proto) return false;
     if(q.get('device')==='android') setDevice('android');
     applyBgState(q.get('bg'));
     if(q.get('statusbar')==='1'){ document.body.classList.add('statusbar-on'); statusBarToggle.setAttribute('aria-pressed','true'); }
-    { const ink=q.get('sbink'); if(ink==='light'||ink==='dark') setStatusBarInk(ink); }
+    { const ink=q.get('sbink'); if(ink==='light'||ink==='dark') setStatusBarInk(ink,true); }
     showURL(proto, q.get('title')||undefined);
+    return true;
+  }
+  // First-run empty state ("Drop your HTML"): the phone screen is dark, so default the
+  // status bar to ON with Dark ink (white icons). Shared links keep their own settings.
+  function applyEmptyDefaults(){
+    document.body.classList.add('statusbar-on');
+    statusBarToggle.setAttribute('aria-pressed','true');
+    setStatusBarInk('dark');
   }
 
   // yes / no confirm popup
@@ -982,6 +1007,7 @@
   function stopRec(){ if(mediaRecorder && mediaRecorder.state!=='inactive') mediaRecorder.stop(); }
   recBtn.addEventListener('click',()=>{ (mediaRecorder && mediaRecorder.state==='recording') ? stopRec() : startRec(); });
 
-  // open a shared prototype (?proto=…) once everything is wired up
-  applyShared();
+  // open a shared prototype (?proto=…) once everything is wired up; otherwise start on
+  // the empty state with the status bar on + dark ink by default
+  if(!applyShared()) applyEmptyDefaults();
 })();

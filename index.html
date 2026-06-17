@@ -47,7 +47,7 @@
 
   <div id="deviceUnit">
     <div class="viewport"><iframe id="frame" title="Preview" sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-modals"></iframe><div class="cursor-shield" id="cursorShield"></div><div class="frame-loader" id="frameLoader"><div class="loader-ring"></div></div></div>
-    <svg class="statusbar" id="statusBar" width="375" height="54" viewBox="0 0 375 54" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <svg class="statusbar statusbar-ios" id="statusBar" width="375" height="54" viewBox="0 0 375 54" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <g class="sb-content">
         <path d="M283 28.5H284C284.552 28.5 285 28.9477 285 29.5V31.5C285 32.0523 284.552 32.5 284 32.5H283C282.448 32.5 282 32.0523 282 31.5V29.5C282 28.9477 282.448 28.5 283 28.5Z" fill="currentColor"/>
         <path d="M287.5 26.5H288.5C289.052 26.5 289.5 26.9477 289.5 27.5V31.5C289.5 32.0523 289.052 32.5 288.5 32.5H287.5C286.948 32.5 286.5 32.0523 286.5 31.5V27.5C286.5 26.9477 286.948 26.5 287.5 26.5Z" fill="currentColor"/>
@@ -64,6 +64,22 @@
         <path d="M55.7413 32.2637C53.2291 32.2637 51.7203 30.1323 51.7203 26.7192V26.7046C51.7203 23.2915 53.2291 21.1675 55.7413 21.1675C58.2535 21.1675 59.777 23.2915 59.777 26.7046V26.7192C59.777 30.1323 58.2535 32.2637 55.7413 32.2637ZM55.7413 30.7329C57.089 30.7329 57.8727 29.2241 57.8727 26.7192V26.7046C57.8727 24.1997 57.089 22.7056 55.7413 22.7056C54.3937 22.7056 53.6246 24.1997 53.6246 26.7046V26.7192C53.6246 29.2241 54.3937 30.7329 55.7413 30.7329Z" fill="currentColor"/>
       </g>
       <rect class="sb-notch" x="127" y="9" width="121" height="35" rx="17.5" fill="black"/>
+    </svg>
+    <svg class="statusbar statusbar-android" id="statusBarAndroid" width="375" height="54" viewBox="0 0 375 54" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <g class="sb-content">
+        <text class="sb-time" x="24" y="32.5" fill="currentColor">9:41</text>
+        <!-- wifi (reused from the iOS bar, nudged left) -->
+        <g transform="translate(-18,0)">
+          <path d="M308.83 29.9267C310.083 28.8444 311.918 28.8444 313.171 29.9267C313.234 29.9849 313.271 30.0675 313.272 30.1542C313.274 30.2408 313.24 30.324 313.18 30.3847L311.218 32.4072C311.16 32.4664 311.082 32.4999 311 32.4999C310.918 32.4998 310.84 32.4665 310.782 32.4072L308.82 30.3847C308.76 30.324 308.727 30.2407 308.729 30.1542C308.73 30.0675 308.767 29.9849 308.83 29.9267ZM306.212 27.2294C308.911 24.665 313.092 24.665 315.791 27.2294C315.852 27.2894 315.887 27.3717 315.888 27.4579C315.889 27.5445 315.855 27.628 315.795 27.6894L314.661 28.8603C314.544 28.9795 314.355 28.9814 314.235 28.8652C313.349 28.0456 312.196 27.5917 311 27.5917C309.805 27.5923 308.653 28.0462 307.768 28.8652C307.648 28.9815 307.459 28.9796 307.342 28.8603L306.208 27.6894C306.148 27.6282 306.116 27.5452 306.116 27.4589C306.117 27.3725 306.151 27.2895 306.212 27.2294ZM303.595 24.539C307.735 20.487 314.265 20.487 318.405 24.539C318.465 24.5992 318.5 24.6817 318.5 24.7675C318.5 24.8533 318.467 24.9361 318.408 24.997L317.272 26.1669C317.155 26.2868 316.966 26.288 316.848 26.1699C315.27 24.6383 313.176 23.7842 311 23.7841C308.824 23.7842 306.731 24.6385 305.153 26.1699C305.035 26.2882 304.844 26.2871 304.728 26.1669L303.592 24.997C303.533 24.9361 303.5 24.8532 303.5 24.7675C303.501 24.6817 303.535 24.5991 303.595 24.539Z" fill="currentColor"/>
+        </g>
+        <!-- signal: Android-style filled triangle -->
+        <path d="M305 32.5H318V21.5Z" fill="currentColor"/>
+        <!-- battery (reused from the iOS bar) -->
+        <rect x="324" y="21.5" width="21.6077" height="11" rx="2.16667" stroke="currentColor" stroke-opacity="0.6"/>
+        <path d="M347.135 24.8823V29.1176C347.962 28.7589 348.5 27.9245 348.5 27C348.5 26.0755 347.962 25.241 347.135 24.8823Z" fill="currentColor" fill-opacity="0.6"/>
+        <rect x="325.555" y="23.1177" width="18.4972" height="7.76471" rx="1.33333" fill="currentColor"/>
+      </g>
+      <circle class="sb-cam" cx="187.5" cy="27" r="8" fill="black"/>
     </svg>
     <img class="mock" id="mock" alt="Hand holding a phone" draggable="false" src="hand-ios.png">
     <div class="empty" id="empty">

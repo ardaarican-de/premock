@@ -57,12 +57,17 @@
     height:auto; z-index:2; display:none;
     pointer-events:none; user-select:none; -webkit-user-drag:none;
   }
-  body.statusbar-on .statusbar{display:block;}
+  /* show the variant that matches the active device */
+  body.statusbar-on .statusbar-ios{display:block;}
+  body.statusbar-on.android .statusbar-ios{display:none;}
+  body.statusbar-on.android .statusbar-android{display:block;}
   /* Status bar content (clock, signal, wifi, battery) follows whatever sits behind it
      on the phone screen: dark ink over light content, white ink over dark content.
-     JS toggles .on-dark from the live pixel/colour behind the bar. Notch stays black. */
+     JS toggles body.sb-on-dark from the live pixel/colour behind the bar. Notch/camera
+     stay black always. */
   .statusbar .sb-content{color:#000; transition:color .3s ease;}
-  .statusbar.on-dark .sb-content{color:#fff;}
+  body.sb-on-dark .statusbar .sb-content{color:#fff;}
+  .statusbar-android .sb-time{font-family:var(--ui); font-size:15px; font-weight:600; letter-spacing:.2px;}
 
   /* bottom-right menu — device switch + status bar in one glass bar */
   .right-dock{
@@ -310,10 +315,10 @@
   body.dark .brand .credit:hover{color:rgba(244,241,234,.85);}
   body.dark .brand .credit:hover b{color:#f4f1ea;}
 
-  .filepill{position:fixed;z-index:30;top:22px;right:24px;background:var(--glass);border:1px solid var(--glass-line);color:var(--text-on-glass);padding:7px 13px;border-radius:11px;font-size:12px;font-family:ui-monospace,"SF Mono",Menlo,monospace;display:none;align-items:center;gap:8px;max-width:40vw;backdrop-filter:blur(12px);transition:opacity .35s ease;}
+  .filepill{position:fixed;z-index:30;top:22px;right:24px;background:var(--glass);border:1px solid var(--glass-line);color:var(--text-on-glass);padding:7px 7px 7px 13px;border-radius:11px;font-size:12px;font-family:var(--ui);display:none;align-items:center;gap:7px;max-width:40vw;backdrop-filter:blur(12px);transition:opacity .35s ease,padding-left .26s cubic-bezier(.4,0,.2,1);}
   .filepill.show{display:inline-flex;}
   .filepill span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .filepill .savebtn{appearance:none;border:0;background:rgba(255,255,255,.1);color:var(--text-on-glass);width:24px;height:24px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;margin-left:3px;flex:none;transition:background .15s ease,color .15s ease;}
+  .filepill .savebtn{appearance:none;border:0;background:rgba(255,255,255,.1);color:var(--text-on-glass);width:24px;height:24px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex:none;transition:background .15s ease,color .15s ease;}
   .filepill .savebtn:hover{background:rgba(255,255,255,.22);}
   .filepill .savebtn svg{width:13px;height:13px;}
   .filepill .savebtn.done{background:#3fa564;color:#fff;}
@@ -322,14 +327,22 @@
   .filepill .sharebtn[hidden]{display:none;}
   .filepill .sharebtn.copied{background:#3fa564;color:#fff;}
   .filepill .sharebtn.copied:hover{background:#359158;}
+  /* chain holds, then cross-fades into the tick: outgoing fades via transition,
+     incoming fades in via sharePop */
+  .filepill .sharebtn svg{transition:opacity .1s ease,transform .1s ease;}
+  .filepill .sharebtn svg.ico-link{width:20px;height:20px;}   /* chain reads small — bump it up */
+  .filepill .sharebtn.copied svg{animation:sharePop .18s cubic-bezier(.22,1,.36,1);}
+  @keyframes sharePop{from{transform:scale(.55);opacity:0;}to{transform:scale(1);opacity:1;}}
+  .filepill .sharebtn.swapping svg{opacity:0;transform:scale(.55);}
   /* share → "Copied link": collapse the filename + bookmark, slide the label in */
   /* Per-direction timing: fade OUT fast on the way in; on the way back, hold the name
      hidden until the width has reopened, then fade IN — so it never reveals as a clipped "…". */
   .filepill #filename{max-width:40vw;transition:max-width .26s cubic-bezier(.4,0,.2,1),opacity .15s ease .22s,margin .26s cubic-bezier(.4,0,.2,1);}
   .filepill #saveBtn{max-width:24px;transition:max-width .26s cubic-bezier(.4,0,.2,1),opacity .15s ease .22s,margin .26s cubic-bezier(.4,0,.2,1),padding .26s cubic-bezier(.4,0,.2,1),background .15s ease,color .15s ease;}
   .copied-label{display:inline-flex;align-items:center;max-width:0;opacity:0;margin-left:-8px;overflow:hidden;white-space:nowrap;color:var(--text-on-glass);font:500 12.5px var(--ui);transition:max-width .26s cubic-bezier(.4,0,.2,1),opacity .14s ease,margin .26s cubic-bezier(.4,0,.2,1);}
-  .filepill.is-copied #filename{max-width:0;opacity:0;margin-right:-8px;transition:max-width .26s cubic-bezier(.4,0,.2,1),opacity .14s ease,margin .26s cubic-bezier(.4,0,.2,1);}
-  .filepill.is-copied #saveBtn{max-width:0;opacity:0;margin:0 -8px 0 0;padding:0;transition:max-width .26s cubic-bezier(.4,0,.2,1),opacity .14s ease,margin .26s cubic-bezier(.4,0,.2,1),padding .26s cubic-bezier(.4,0,.2,1);}
+  .filepill.is-copied{padding-left:7px;}   /* tick now leftmost — match the 7px top/bottom inset */
+  .filepill.is-copied #filename{max-width:0;opacity:0;margin-right:-7px;transition:max-width .26s cubic-bezier(.4,0,.2,1),opacity .14s ease,margin .26s cubic-bezier(.4,0,.2,1);}
+  .filepill.is-copied #saveBtn{max-width:0;opacity:0;margin:0 -7px 0 0;padding:0;transition:max-width .26s cubic-bezier(.4,0,.2,1),opacity .14s ease,margin .26s cubic-bezier(.4,0,.2,1),padding .26s cubic-bezier(.4,0,.2,1);}
   .filepill.is-copied .copied-label{max-width:160px;opacity:1;margin-left:0;transition:max-width .26s cubic-bezier(.4,0,.2,1),opacity .2s ease .08s,margin .26s cubic-bezier(.4,0,.2,1);}
 
   .confirm-pop{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:rgba(10,10,12,.42);backdrop-filter:blur(3px);}
