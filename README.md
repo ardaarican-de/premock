@@ -15,11 +15,12 @@ PreMock drops your prototype into a realistic hand‑held phone mockup and turns
   - **HTML** — drag & drop a file, click **Upload HTML**, or paste raw markup into the gallery.
 - **Realistic device mockup** — a hand holding the phone, with an **iOS / Android** toggle.
 - **Custom cursor** — a soft dot replaces the system cursor over the screen for a clean, touch‑like feel.
-- **Backdrops** — three built‑in scenes (Soft Gray, Apricot, Sky Blue), a full **color palette** with hex input and a random‑color dice, or your own **background image**.
-- **iPhone status bar overlay** — toggle a status bar on top of the screen.
+- **Backdrops** — three built‑in scenes (Soft Gray, Apricot, Sky Blue), a set of **ready‑made room photos** (home, office, clothing store, coffee shop), a full **color palette** with hex input and a random‑color dice, or your own uploaded **background image**.
+- **Status bar overlay** — toggle an **iOS or Android** status bar on top of the screen. Its ink follows the content behind it automatically (**Auto**), or you can force **Light** / **Dark**.
 - **Prototype gallery** — save, rename, reorder and remove prototypes; persisted in the browser (`localStorage`). Figma titles are fetched automatically via oEmbed.
 - **Presentation mode** — go fullscreen; the UI fades away while you present.
 - **Screen recording** — capture the presentation with `MediaRecorder` and download a `.webm`. Optional **microphone audio** via a checkbox in the record tooltip.
+- **Capture Scene** — grab a single clean frame of the scene as a `.png`. The whole UI (dock, menus, cursor) is hidden for the shot — only the backdrop, phone and the top‑left brand are captured. Reuses the live recording stream when one is running, so it won't prompt twice.
 - **Shareable links** — for Figma prototypes, copy a link that reproduces the prototype, device, backdrop and status‑bar state on open.
 - **Dark‑mode aware favicon.**
 
@@ -31,9 +32,11 @@ No build step, no dependencies — just **vanilla HTML, CSS and JavaScript**.
 |------|---------|
 | [`index.html`](index.html) | Markup + Google Analytics + favicon |
 | [`styles.css`](styles.css) | All styling |
-| [`app.js`](app.js) | All behavior (device fitting, cursor, gallery, scenes, recording, sharing) |
+| [`app.js`](app.js) | All behavior (device fitting, cursor, gallery, scenes, recording, capture, sharing) |
+| [`example-prototype.js`](example-prototype.js) | Bundled demo prototype shown in the gallery by default (inlined so it works on `file://`) |
 | `hand-ios.png` / `hand-and.png` | Device mockup images (transparent screen cutout) |
 | `bg-images/` | Ready‑made backdrop images (WebP) |
+| `figma-guideline/` | Screenshots for the in‑app Figma setup guide |
 | `og-image.png` | Social share preview (1200×630) |
 | `favicon.svg` | Dark‑mode aware favicon |
 | `robots.txt`, `sitemap.xml` | SEO |
@@ -64,7 +67,8 @@ python3 -m http.server 8080
 3. Pick a **backdrop** from the bottom‑left dock (scenes, palette or your own image).
 4. Switch **iOS / Android** and toggle the **status bar** from the bottom‑right.
 5. Press **Full Screen** to present, or **Record** to capture a clip (tick *Record microphone audio* first if you want voice‑over).
-6. For Figma prototypes, use the **share** button to copy a link that restores the full setup.
+6. Use **Capture Scene** to download a clean `.png` of the current scene (UI hidden, brand kept).
+7. For Figma prototypes, use the **share** button to copy a link that restores the full setup.
 
 ### Figma prototype tips
 
