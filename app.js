@@ -1058,6 +1058,55 @@
   function stopRec(){ if(mediaRecorder && mediaRecorder.state!=='inactive') mediaRecorder.stop(); }
   recBtn.addEventListener('click',()=>{ (mediaRecorder && mediaRecorder.state==='recording') ? stopRec() : startRec(); });
 
+  // snapshot — grab a single frame of the scene (UI chrome hidden) and download it as PNG.
+  // the prototype lives in a (possibly cross-origin) iframe, so we capture via a display
+  // stream rather than html2canvas; reuse the live recording stream when one exists to
+  // avoid a second picker prompt.
+  const shotBtn=document.getElementById('shotBtn');
+  async function captureShot(){
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getDisplayMedia){
+      alert('Image capture is not supported in this browser.'); return;
+    }
+    let stream, reuse=false;
+    if(mediaRecorder && mediaRecorder.state==='recording' && recStream){ stream=recStream; reuse=true; }
+    else{
+      try{ stream=await navigator.mediaDevices.getDisplayMedia({video:true,audio:false,selfBrowserSurface:'include',preferCurrentTab:true}); }
+      catch(e){ return; }   // user cancelled the picker
+    }
+    shotBtn.classList.add('is-busy');
+    document.body.classList.add('capturing');   // hide dock, brand, popovers, cursor…
+    try{
+      const video=document.createElement('video');
+      video.srcObject=stream; video.muted=true; video.playsInline=true;
+      await video.play();
+      // let the hidden UI paint into the capture before grabbing — the dock/popovers
+      // normally fade over ~0.35s, so we kill their transitions in CSS (body.capturing)
+      // for an instant hide and still give the capture compositor a short safety margin
+      await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+      await new Promise(r=>setTimeout(r,120));
+      const w=video.videoWidth, h=video.videoHeight;
+      const canvas=document.createElement('canvas'); canvas.width=w; canvas.height=h;
+      canvas.getContext('2d').drawImage(video,0,0,w,h);
+      video.pause(); video.srcObject=null;
+      await new Promise(res=>canvas.toBlob(blob=>{
+        if(blob){
+          const url=URL.createObjectURL(blob);
+          const a=document.createElement('a');
+          a.href=url; a.download='premock-'+Date.now()+'.png';
+          document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(()=>URL.revokeObjectURL(url),2000);
+        }
+        res();
+      },'image/png'));
+    }catch(err){ alert('Could not capture the scene.'); }
+    finally{
+      document.body.classList.remove('capturing');
+      shotBtn.classList.remove('is-busy');
+      if(!reuse && stream){ stream.getTracks().forEach(t=>t.stop()); }
+    }
+  }
+  shotBtn.addEventListener('click',captureShot);
+
   // open a shared prototype (?proto=…) once everything is wired up; otherwise start on
   // the empty state with the status bar on + dark ink by default
   if(!applyShared()) applyEmptyDefaults();

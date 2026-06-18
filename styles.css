@@ -402,6 +402,10 @@
   body.screen-hover .sheet,
   body.screen-hover .right-dock{opacity:0!important;pointer-events:none!important;}
   body.present .dock.idle{opacity:0;pointer-events:none;}
+  /* hide every overlay while snapshotting so only the scene + phone (and the top-left
+     PreMock / by Arda Arıcan brand) get captured */
+  body.capturing > *:not(#scene):not(#deviceUnit):not(.brand){opacity:0!important;pointer-events:none!important;transition:none!important;}
+  body.capturing .brand{opacity:1!important;transition:none!important;}
 
   /* gallery sheet */
   .sheet{position:fixed;z-index:35;left:22px;bottom:110px;transform:translateY(12px);width:max-content;max-height:62vh;overflow:auto;background:var(--glass);border:1px solid var(--glass-line);border-radius:20px;backdrop-filter:blur(16px) saturate(140%);padding:18px;opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;color:var(--text-on-glass);}
