@@ -1,4 +1,4 @@
-(function(){
+(async function(){
   // Device mockups — screen-hole geometry measured from each PNG (transparent cutout).
   const DEVICES={
     ios:    {src:'hand-ios.png',  img:[768,1257], scr:[285,211,373,812]},
@@ -336,6 +336,11 @@
     else showHTML(current.src,current.title);
   }
   const ringDefault=drop.querySelector('.ring').innerHTML;
+  if(!window.firebaseReady){
+    console.warn('Firebase not ready. HTML uploads will open locally, not upload to Storage. Serve the site over HTTP and reload.');
+    const status=drop.querySelector('.ring');
+    if(status){ status.textContent='Firebase not ready — local preview only'; setTimeout(()=>{status.innerHTML=ringDefault;},3000); }
+  }
   function readHTMLFile(file){
     if(!file) return;
     if(!(file.type==='text/html'||/\.html?$/i.test(file.name))){
@@ -347,17 +352,62 @@
     r.readAsText(file);
   }
 
+  async function uploadHTMLFile(file){
+    if(!window.firebaseReady){
+      const status=drop.querySelector('.ring');
+      if(status){ status.textContent='Firebase not initialized — opening locally'; }
+      setTimeout(()=>{ if(status) status.innerHTML=ringDefault; }, 1600);
+      return readHTMLFile(file);
+    }
+    if(typeof window.uploadFileToFirebase !== 'function') return readHTMLFile(file);
+    const status=drop.querySelector('.ring');
+    if(status){ status.textContent='Uploading HTML to Firebase...'; }
+    try{
+      const {downloadURL, path} = await window.uploadFileToFirebase(file,'html');
+      if(status){ setTimeout(()=>{ status.innerHTML=ringDefault; }, 1600); }
+      const publicUrl = path && window.firebaseStoragePublicUrl ? window.firebaseStoragePublicUrl(path) : downloadURL;
+      const storagePath = path || null;
+      showURL(publicUrl,file.name,storagePath);
+    }catch(err){
+      if(status){ status.textContent='Firebase upload failed'; }
+      setTimeout(()=>{ if(status) status.innerHTML=ringDefault; }, 1400);
+      console.error(err);
+      readHTMLFile(file);
+    }
+  }
+
+  async function uploadBgFile(file, fallbackUrl){
+    if(typeof window.uploadFileToFirebase !== 'function') return fallbackUrl;
+    const status=drop.querySelector('.ring');
+    if(status){ status.textContent='Uploading background image to Firebase...'; }
+    try{
+      const {downloadURL} = await window.uploadFileToFirebase(file,'image');
+      if(status){ setTimeout(()=>{ status.innerHTML=ringDefault; }, 1600); }
+      return downloadURL;
+    }catch(err){
+      if(status){ status.textContent='Firebase upload failed'; }
+      setTimeout(()=>{ if(status) status.innerHTML=ringDefault; }, 1400);
+      console.error(err);
+      return fallbackUrl;
+    }
+  }
+
   // drag & drop on whole window
   let depth=0;
   const hasFiles=e=>e.dataTransfer&&Array.from(e.dataTransfer.types||[]).includes('Files');
   window.addEventListener('dragenter',e=>{if(!hasFiles(e))return;e.preventDefault();depth++;drop.classList.add('show');});
   window.addEventListener('dragover',e=>{if(hasFiles(e))e.preventDefault();});
   window.addEventListener('dragleave',e=>{if(!hasFiles(e))return;depth--;if(depth<=0){depth=0;drop.classList.remove('show');}});
-  window.addEventListener('drop',e=>{if(!hasFiles(e))return;e.preventDefault();depth=0;drop.classList.remove('show');readHTMLFile(e.dataTransfer.files[0]);});
+  window.addEventListener('drop',e=>{if(!hasFiles(e))return;e.preventDefault();depth=0;drop.classList.remove('show');uploadHTMLFile(e.dataTransfer.files[0]);});
 
   document.getElementById('uploadBtn').addEventListener('click',()=>fileInput.click());
   empty.addEventListener('click',()=>fileInput.click());
-  fileInput.addEventListener('change',e=>readHTMLFile(e.target.files[0]));
+  fileInput.addEventListener('change',async e=>{
+    const file=e.target.files[0];
+    if(!file) return;
+    await uploadHTMLFile(file);
+    e.target.value='';
+  });
   resetBtn.addEventListener('click',()=>{
     resetBtn.classList.remove('spin');
     void resetBtn.offsetWidth;            // restart the animation on every click
@@ -544,10 +594,11 @@
     if(palettePopover.classList.contains('open') && !e.target.closest('#palettePopover') && !e.target.closest('.sw-palette')) closePalette();
     if(bgPopover.classList.contains('open') && !e.target.closest('#bgPopover') && !e.target.closest('.sw-custom')) closeBg();
   });
-  bgInput.addEventListener('change',e=>{
+  bgInput.addEventListener('change',async e=>{
     const f=e.target.files[0]; if(!f) return;
     selectedBg=null;
-    const url=URL.createObjectURL(f);
+    const localUrl=URL.createObjectURL(f);
+    const url=await uploadBgFile(f, localUrl);
     scene.className=''; scene.style.backgroundImage='url('+url+')';
     applyBgDark(url);   // auto: light image → dark ink, dark image → white ink
     customSwatch.classList.add('has-image');
@@ -611,7 +662,7 @@
   });
 
   // ---- prototype gallery ----
-  function showURL(url,title){
+  function showURL(url,title, storagePath){
     frame.onload=null;
     clearTimeout(loaderMaxTimer);
     frameLoader.classList.add('show');
@@ -621,6 +672,7 @@
     empty.classList.add('hidden'); resetBtn.disabled=false;
     resetInkForPrototype();
     current={type:'url',src:url,title:title||url};
+    if(storagePath) current.storagePath=storagePath;
     filename.textContent=title||url; filepill.classList.add('show');
     syncSaveBtn(); syncShareBtn();
   }
@@ -811,32 +863,38 @@
 
   // ---- share link: reproduce the current Figma prototype + background + device on open ----
   const shareBtn=document.getElementById('shareBtn');
-  // Share is only meaningful for Figma links (HTML pasted/uploaded prototypes aren't URL-addressable).
   function syncShareBtn(){
-    shareBtn.hidden = !(current && current.type==='url' && !!figmaEmbedURL(current.src));
+    shareBtn.hidden = !(current && current.type==='url');
   }
-  // Serialize the active background: solid color (c:), preset image (i:) or one of the 3 scenes (s:).
+  // Serialize the active background: color (C), uploaded image (I) or preset scene (S).
   function getBgState(){
-    if(paletteActive) return 'c:'+selectedPaletteColor.replace(/^#/,'');
-    if(selectedBg) return 'i:'+selectedBg;
+    if(paletteActive) return 'C'+selectedPaletteColor.replace(/^#/,'');
+    if(selectedBg) return 'I'+selectedBg;
     const m=(scene.className||'').match(/scene-(\w+)/);
-    return m ? 's:'+m[1] : 's:studio';
+    if(!m) return 'S0';
+    return 'S'+({'studio':'0','living':'1','desk':'2'}[m[1]]||'0');
   }
   function applyBgState(s){
     if(!s) return;
-    const v=s.slice(2);
-    if(s.indexOf('c:')===0){ setSolidScene(/^#/.test(v)?v:'#'+v); }
-    else if(s.indexOf('i:')===0){ const bg=presetBackgrounds.find(b=>b.src===v); applyBackground(v, bg?bg.dark!==false:true); }
-    else if(s.indexOf('s:')===0){ setPresetScene(v); }
+    const type=s[0];
+    const v=s.slice(1);
+    if(type==='C'){ setSolidScene(/^#/.test(v)?v:'#'+v); }
+    else if(type==='I'){ const bg=presetBackgrounds.find(b=>b.src===v); applyBackground(v, bg?bg.dark!==false:true); }
+    else if(type==='S'){
+      const sceneMap={0:'studio',1:'living',2:'desk'};
+      setPresetScene(sceneMap[v]||'studio');
+    }
   }
   function buildShareLink(){
     const p=new URLSearchParams();
-    p.set('proto', current.src);
-    if(current.title) p.set('title', current.title);
-    p.set('device', currentDevice);
-    if(document.body.classList.contains('statusbar-on')) p.set('statusbar','1');
-    if(statusBarInk!=='auto') p.set('sbink', statusBarInk);
-    p.set('bg', getBgState());
+    const protoValue = current && current.storagePath ? current.storagePath : current && current.src ? current.src : '';
+    if(protoValue) p.set('p', protoValue);
+    if(current && current.title) p.set('t', current.title);
+    if(currentDevice==='android') p.set('d','a');
+    if(document.body.classList.contains('statusbar-on')) p.set('sb','1');
+    if(statusBarInk==='light') p.set('bi','l');
+    else if(statusBarInk==='dark') p.set('bi','d');
+    const bg=getBgState(); if(bg!=='S0') p.set('b', bg);
     return location.origin+location.pathname+'?'+p.toString();
   }
   const ICON_SHARE=shareBtn.innerHTML;
@@ -846,7 +904,20 @@
   let shareResetTimer, shareIconTimer, nameW=0, labelW=0;
   shareBtn.addEventListener('click',async()=>{
     if(!current) return;
-    const link=buildShareLink();
+    let id = current.shareId;
+    if(!id && window.firebaseSaveShare){
+      const mapping = {
+        proto: current.storagePath || current.src,
+        title: current.title,
+        device: currentDevice,
+        statusbar: document.body.classList.contains('statusbar-on'),
+        sbink: statusBarInk==='light' ? 'light' : statusBarInk==='dark' ? 'dark' : 'auto',
+        bg: getBgState()
+      };
+      try{ id = await window.firebaseSaveShare(mapping); current.shareId = id; }
+      catch(err){ console.error('Save share failed', err); }
+    }
+    const link = id ? location.origin+location.pathname+'?id='+encodeURIComponent(id) : buildShareLink();
     // Lock the real pixel widths so the name collapses and the label expands over the FULL
     // duration in sync — animating max-width between content-sized values avoids the dead-zone
     // wobble (pill ballooning) you get when max-width travels far past the actual content width.
@@ -877,14 +948,30 @@
     catch(e){ const ta=document.createElement('textarea'); ta.value=link; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(_){} ta.remove(); }
   });
   // Restore shared state on load (?proto=…): device → background → status bar → open prototype.
-  function applyShared(){
+  async function applyShared(){
     const q=new URLSearchParams(location.search);
-    const proto=q.get('proto'); if(!proto) return false;
-    if(q.get('device')==='android') setDevice('android');
-    applyBgState(q.get('bg'));
-    if(q.get('statusbar')==='1'){ document.body.classList.add('statusbar-on'); statusBarToggle.setAttribute('aria-pressed','true'); }
-    { const ink=q.get('sbink'); if(ink==='light'||ink==='dark') setStatusBarInk(ink,true); }
-    showURL(proto, q.get('title')||undefined);
+    const shareId=q.get('id');
+    let shareData;
+    if(shareId && window.firebaseLoadShare){
+      try{ shareData = await window.firebaseLoadShare(shareId); }
+      catch(e){ console.warn('Share id not found', e); return false; }
+    } else {
+      const protoKey=q.get('p'); if(!protoKey) return false;
+      shareData = {
+        proto: protoKey,
+        title: q.get('t')||undefined,
+        device: q.get('d')==='a' ? 'android' : 'ios',
+        statusbar: q.get('sb')==='1',
+        sbink: q.get('bi')==='l' ? 'light' : q.get('bi')==='d' ? 'dark' : 'auto',
+        bg: q.get('b')||undefined
+      };
+    }
+    const protoUrl = shareData.proto.startsWith('http') ? shareData.proto : (window.firebaseStoragePublicUrl ? window.firebaseStoragePublicUrl(shareData.proto) : shareData.proto);
+    if(shareData.device==='android') setDevice('android');
+    applyBgState(shareData.bg);
+    if(shareData.statusbar){ document.body.classList.add('statusbar-on'); statusBarToggle.setAttribute('aria-pressed','true'); }
+    if(shareData.sbink==='light' || shareData.sbink==='dark') setStatusBarInk(shareData.sbink,true);
+    showURL(protoUrl, shareData.title||undefined, shareData.proto);
     return true;
   }
   // First-run empty state ("Drop your HTML"): the phone screen is dark, so default the
@@ -1107,7 +1194,7 @@
   }
   shotBtn.addEventListener('click',captureShot);
 
-  // open a shared prototype (?proto=…) once everything is wired up; otherwise start on
+  // open a shared prototype (?proto=… or ?id=…) once everything is wired up; otherwise start on
   // the empty state with the status bar on + dark ink by default
-  if(!applyShared()) applyEmptyDefaults();
+  (async()=>{ if(!(await applyShared())) applyEmptyDefaults(); })();
 })();
