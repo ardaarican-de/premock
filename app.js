@@ -858,7 +858,9 @@
     if(!current) return;
     const exists=currentInGallery();
     saveBtn.classList.toggle('done', exists);
-    saveBtn.title = exists ? 'In gallery — click to remove' : 'Save to gallery';
+    const saveTip = exists ? 'Remove from gallery' : 'Save to gallery';
+    saveBtn.setAttribute('data-tip', saveTip);
+    saveBtn.setAttribute('aria-label', saveTip);
   }
 
   // ---- share link: reproduce the current Figma prototype + background + device on open ----
@@ -935,7 +937,7 @@
     filename.style.maxWidth='0px'; copiedLabel.style.maxWidth=labelW+'px';
     // show the link/chain icon first; hold it ~2s, then smoothly cross-fade to the tick
     shareBtn.classList.remove('swapping');
-    shareBtn.classList.add('copied'); shareBtn.innerHTML=ICON_LINK; shareBtn.title='Link copied!';
+    shareBtn.classList.add('copied'); shareBtn.innerHTML=ICON_LINK; shareBtn.setAttribute('data-tip','Link copied!');
     clearTimeout(shareIconTimer);
     shareIconTimer=setTimeout(()=>{
       shareBtn.classList.add('swapping');               // fade the chain out
@@ -948,7 +950,7 @@
       filepill.classList.remove('is-copied');
       filename.style.maxWidth=nameW+'px'; copiedLabel.style.maxWidth='0px';   // animate back in sync
       setTimeout(()=>{ filename.style.maxWidth=''; copiedLabel.style.maxWidth=''; },420);   // release the locks after the (delayed) fade-in completes
-      shareBtn.classList.remove('copied','swapping'); shareBtn.innerHTML=ICON_SHARE; shareBtn.title='Copy share link';
+      shareBtn.classList.remove('copied','swapping'); shareBtn.innerHTML=ICON_SHARE; shareBtn.setAttribute('data-tip','Share prototype');
     },3400);
     try{ await navigator.clipboard.writeText(link); }
     catch(e){ const ta=document.createElement('textarea'); ta.value=link; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(_){} ta.remove(); }

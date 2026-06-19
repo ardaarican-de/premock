@@ -342,6 +342,12 @@
   .filepill.is-copied #filename{max-width:0;opacity:0;margin-right:-7px;transition:max-width .26s cubic-bezier(.4,0,.2,1),opacity .14s ease,margin .26s cubic-bezier(.4,0,.2,1);}
   .filepill.is-copied #saveBtn{max-width:0;opacity:0;margin:0 -7px 0 0;padding:0;transition:max-width .26s cubic-bezier(.4,0,.2,1),opacity .14s ease,margin .26s cubic-bezier(.4,0,.2,1),padding .26s cubic-bezier(.4,0,.2,1);}
   .filepill.is-copied .copied-label{max-width:160px;opacity:1;margin-left:0;transition:max-width .26s cubic-bezier(.4,0,.2,1),opacity .2s ease .08s,margin .26s cubic-bezier(.4,0,.2,1);}
+  /* Save / Share tooltips — the pill sits in the top-right, so these open DOWNWARD and anchor
+     to the button's right edge to stay clear of the screen edge. */
+  .filepill .savebtn[data-tip]{position:relative;}
+  .filepill .savebtn[data-tip]::after{content:attr(data-tip);position:absolute;top:calc(100% + 9px);right:0;background:var(--glass);border:1px solid var(--glass-line);color:var(--text-on-glass);backdrop-filter:blur(16px) saturate(140%);padding:5px 9px;border-radius:9px;font-family:var(--ui);font-size:11.5px;font-weight:500;line-height:1;white-space:nowrap;opacity:0;pointer-events:none;box-shadow:0 8px 22px -12px rgba(0,0,0,.4);transform:translateY(-4px);transition:opacity .14s ease,transform .14s ease;z-index:40;}
+  .filepill .savebtn[data-tip]:hover::after{opacity:1;transform:translateY(0);}
+  .filepill.is-copied .savebtn[data-tip]::after{display:none;}   /* hide during the copied animation */
 
   .confirm-pop{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:rgba(10,10,12,.42);backdrop-filter:blur(3px);}
   .confirm-pop.open{display:flex;}
