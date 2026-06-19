@@ -917,7 +917,7 @@
       try{ id = await window.firebaseSaveShare(mapping); current.shareId = id; }
       catch(err){ console.error('Save share failed', err); }
     }
-    const link = id ? location.origin+location.pathname+'?id='+encodeURIComponent(id) : buildShareLink();
+    const link = id ? location.origin+'/'+encodeURIComponent(id) : buildShareLink();
     // Lock the real pixel widths so the name collapses and the label expands over the FULL
     // duration in sync — animating max-width between content-sized values avoids the dead-zone
     // wobble (pill ballooning) you get when max-width travels far past the actual content width.
@@ -950,8 +950,15 @@
   // Restore shared state on load (?proto=…): device → background → status bar → open prototype.
   async function applyShared(){
     const q=new URLSearchParams(location.search);
-    const shareId=q.get('id');
+    // Clean share links live in the path (/1a). Fall back to the legacy ?id= form.
+    const pathSeg=location.pathname.replace(/^\/+/,'').split('/')[0];
+    const shareId=(pathSeg && pathSeg!=='index.html' && pathSeg!=='404.html') ? decodeURIComponent(pathSeg) : q.get('id');
     let shareData;
+    // firebase-init.js is a deferred module, so its helpers may not be attached yet when this
+    // runs on first paint. Give it a brief window to load before falling back.
+    if(shareId && !window.firebaseLoadShare){
+      for(let i=0;i<50 && !window.firebaseLoadShare;i++) await new Promise(r=>setTimeout(r,40));
+    }
     if(shareId && window.firebaseLoadShare){
       try{ shareData = await window.firebaseLoadShare(shareId); }
       catch(e){ console.warn('Share id not found', e); return false; }

@@ -2,6 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<!-- Keep relative assets (css/js/images) resolving to the site root even when the
+     visible path is a clean share link like /1a. -->
+<base href="/">
+<script>
+  // Clean share links (premock.co/1a) have no file on GitHub Pages, so the host serves
+  // 404.html, which bounces to /?/1a. Restore the clean path here before anything reads it.
+  (function(){
+    var s = location.search;
+    if(s && s.charAt(1) === '/'){
+      history.replaceState(null, '', '/' + s.slice(2) + location.hash);
+    }
+  })();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <!-- Google tag (gtag.js) -->
