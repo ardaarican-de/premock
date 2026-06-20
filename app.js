@@ -599,6 +599,10 @@
     selectedBg=null;
     const localUrl=URL.createObjectURL(f);
     const url=await uploadBgFile(f, localUrl);
+    // Track the uploaded image's URL so share links carry it (getBgState reads selectedBg).
+    // With Firebase this is a public download URL the recipient can load; the local blob
+    // fallback only applies when uploads are unavailable (sharing is off in that case anyway).
+    selectedBg=url;
     scene.className=''; scene.style.backgroundImage='url('+url+')';
     applyBgDark(url);   // auto: light image → dark ink, dark image → white ink
     customSwatch.classList.add('has-image');
