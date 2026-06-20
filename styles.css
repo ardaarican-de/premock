@@ -173,8 +173,6 @@
     opacity:1;
   }
   .cursor-dot.visible{opacity:.65;}
-  /* Over a native (non-prototype) website the iframe shows the real cursor, so hide our dot. */
-  body.native-frame.screen-hover .cursor-dot{opacity:0!important;}
 
   /* empty hint over the screen */
   .empty{
