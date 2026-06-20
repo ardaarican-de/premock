@@ -331,6 +331,7 @@
     frame.onload=attachFrameCursor;
     frame.srcdoc=fixedPreviewHTML(html);
     cursorShield.classList.remove('active');
+    document.body.classList.remove('native-frame');
     empty.classList.add('hidden');
     resetBtn.disabled=false;
     resetInkForPrototype();
@@ -715,7 +716,14 @@
     frameLoader.classList.add('show');
     loaderMaxTimer=setTimeout(()=>frameLoader.classList.remove('show'), 12000);
     frame.removeAttribute('srcdoc'); frame.src=displaySrcFor({type:'url',src:url});
-    cursorShield.classList.add('active');
+    // Figma & uploaded-HTML prototypes keep the cursor shield (custom dot over cross-origin
+    // content). A plain external website instead gets a native, fully-scrollable frame — the
+    // shield's tap-to-pass scroll handling is meant for non-scrolling prototypes and makes a
+    // real webpage feel janky.
+    const isFigma=!!figmaEmbedURL(url);
+    const nativeFrame=!isFigma && !storagePath && !/firebasestorage\.googleapis\.com/.test(url);
+    cursorShield.classList.toggle('active', !nativeFrame);
+    document.body.classList.toggle('native-frame', nativeFrame);
     empty.classList.add('hidden'); resetBtn.disabled=false;
     resetInkForPrototype();
     current={type:'url',src:url,title:title||url};
