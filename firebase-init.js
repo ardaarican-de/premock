@@ -53,7 +53,7 @@ try {
   window.firebaseReady = false;
 }
 
-window.uploadFileToFirebase = async function(file, type) {
+window.uploadFileToFirebase = async function(file, type, onProgress) {
   const safeName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
   const folder = type === 'image' ? 'uploads/images' : 'uploads/html';
   const path = `${folder}/${Date.now()}_${safeName}`;
@@ -65,7 +65,7 @@ window.uploadFileToFirebase = async function(file, type) {
   return new Promise((resolve, reject) => {
     const uploadTask = uploadBytesResumable(storageRef, file, metadata);
     uploadTask.on('state_changed',
-      () => {},
+      (snap) => { if (typeof onProgress === 'function' && snap.totalBytes) onProgress(snap.bytesTransferred / snap.totalBytes * 100); },
       reject,
       async () => {
         try {

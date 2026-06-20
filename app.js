@@ -352,6 +352,34 @@
     r.readAsText(file);
   }
 
+  // Upload toast — quiet top-center progress bar while a file uploads to Firebase
+  const uploadToast=document.getElementById('uploadToast');
+  const uploadToastLabel=document.getElementById('uploadToastLabel');
+  const uploadToastPct=document.getElementById('uploadToastPct');
+  const uploadToastBar=document.getElementById('uploadToastBar');
+  let uploadToastTimer;
+  function showUploadToast(label){
+    clearTimeout(uploadToastTimer);
+    uploadToastLabel.textContent=label;
+    uploadToastPct.textContent='0%';
+    uploadToastBar.style.width='0%';
+    uploadToast.classList.remove('done');
+    uploadToast.classList.add('show');
+  }
+  function setUploadProgress(pct){
+    const p=Math.max(0,Math.min(100,Math.round(pct)));
+    uploadToastBar.style.width=p+'%';
+    uploadToastPct.textContent=p+'%';
+  }
+  function finishUploadToast(){
+    uploadToastBar.style.width='100%'; uploadToastPct.textContent='100%';
+    uploadToast.classList.add('done');
+    uploadToastTimer=setTimeout(()=>uploadToast.classList.remove('show'),900);
+  }
+  function hideUploadToast(){
+    clearTimeout(uploadToastTimer);
+    uploadToastTimer=setTimeout(()=>uploadToast.classList.remove('show','done'),250);
+  }
   async function uploadHTMLFile(file){
     if(!window.firebaseReady){
       const status=drop.querySelector('.ring');
@@ -362,13 +390,16 @@
     if(typeof window.uploadFileToFirebase !== 'function') return readHTMLFile(file);
     const status=drop.querySelector('.ring');
     if(status){ status.textContent='Uploading HTML to Firebase...'; }
+    showUploadToast('Uploading HTML…');
     try{
-      const {downloadURL, path} = await window.uploadFileToFirebase(file,'html');
+      const {downloadURL, path} = await window.uploadFileToFirebase(file,'html',setUploadProgress);
+      finishUploadToast();
       if(status){ setTimeout(()=>{ status.innerHTML=ringDefault; }, 1600); }
       const publicUrl = path && window.firebaseStoragePublicUrl ? window.firebaseStoragePublicUrl(path) : downloadURL;
       const storagePath = path || null;
       showURL(publicUrl,file.name,storagePath);
     }catch(err){
+      hideUploadToast();
       if(status){ status.textContent='Firebase upload failed'; }
       setTimeout(()=>{ if(status) status.innerHTML=ringDefault; }, 1400);
       console.error(err);
@@ -380,11 +411,14 @@
     if(typeof window.uploadFileToFirebase !== 'function') return fallbackUrl;
     const status=drop.querySelector('.ring');
     if(status){ status.textContent='Uploading background image to Firebase...'; }
+    showUploadToast('Uploading image…');
     try{
-      const {downloadURL} = await window.uploadFileToFirebase(file,'image');
+      const {downloadURL} = await window.uploadFileToFirebase(file,'image',setUploadProgress);
+      finishUploadToast();
       if(status){ setTimeout(()=>{ status.innerHTML=ringDefault; }, 1600); }
       return downloadURL;
     }catch(err){
+      hideUploadToast();
       if(status){ status.textContent='Firebase upload failed'; }
       setTimeout(()=>{ if(status) status.innerHTML=ringDefault; }, 1400);
       console.error(err);
