@@ -12,12 +12,13 @@ PreMock drops your prototype into a realistic hand‑held phone mockup and turns
 
 - **Two prototype sources**
   - **Figma** — paste a prototype share link; it's embedded right in the phone.
-  - **HTML** — drag & drop a file, click **Upload HTML**, or paste raw markup into the gallery.
+  - **HTML** — drag & drop a file, click **Upload HTML**, or paste raw markup into the gallery. Uploads to Firebase show a quiet top‑center progress toast.
 - **Realistic device mockup** — a hand holding the phone, with an **iOS / Android** toggle.
 - **Custom cursor** — a soft dot replaces the system cursor over the screen for a clean, touch‑like feel.
 - **Backdrops** — three built‑in scenes (Soft Gray, Apricot, Sky Blue), a set of **ready‑made room photos** (home, office, clothing store, coffee shop), a full **color palette** with hex input and a random‑color dice, or your own uploaded **background image**.
 - **Status bar overlay** — toggle an **iOS or Android** status bar on top of the screen. Its ink follows the content behind it automatically (**Auto**), or you can force **Light** / **Dark**.
-- **Prototype gallery** — save, rename, reorder and remove prototypes; persisted in the browser (`localStorage`). Figma titles are fetched automatically via oEmbed.
+- **Prototype gallery** — save, rename and remove prototypes; persisted in the browser (`localStorage`). Figma titles are fetched automatically via oEmbed.
+- **Onboarding welcome card** — a short intro card appears once on the first visit (dismissed state is remembered).
 - **Presentation mode** — go fullscreen; the UI fades away while you present.
 - **Screen recording** — capture the presentation with `MediaRecorder` and download a `.webm`. Optional **microphone audio** via a checkbox in the record tooltip.
 - **Capture Scene** — grab a single clean frame of the scene as a `.png`. The whole UI (dock, menus, cursor) is hidden for the shot — only the backdrop, phone and the top‑left brand are captured. Reuses the live recording stream when one is running, so it won't prompt twice.
@@ -32,8 +33,10 @@ No build step, no dependencies — just **vanilla HTML, CSS and JavaScript**.
 |------|---------|
 | [`index.html`](index.html) | Markup + Google Analytics + favicon |
 | [`styles.css`](styles.css) | All styling |
-| [`app.js`](app.js) | All behavior (device fitting, cursor, gallery, scenes, recording, capture, sharing) |
+| [`app.js`](app.js) | Core behavior (device fitting, cursor, gallery, scenes, status bar, sharing) |
+| [`recording.js`](recording.js) | Screen recording + scene capture — a self-contained subsystem |
 | [`firebase-init.js`](firebase-init.js) | Firebase wiring — uploads HTML to Storage and saves/loads share links in Firestore |
+| [`firestore.rules`](firestore.rules) / [`storage.rules`](storage.rules) | Security rules for the share/upload backend |
 | [`404.html`](404.html) | GitHub Pages fallback — carries the social‑preview tags and bounces older clean‑path links (`/k7x2qa`) into the app (see [Sharing prototypes](#sharing-prototypes)) |
 | [`example-prototype.js`](example-prototype.js) | Bundled demo prototype shown in the gallery by default (inlined so it works on `file://`) |
 | `hand-ios.png` / `hand-and.png` | Device mockup images (transparent screen cutout) |
@@ -116,6 +119,18 @@ environment you presented it in — same device frame, backdrop and status bar �
 
 > Sharing needs Firebase configured (Storage + Firestore). Without it, uploads stay local and
 > the share button falls back to a long query‑string link for Figma prototypes only.
+
+**Security rules**
+
+Shares and uploads are unauthenticated by design (anyone can create a link, anyone with the id
+can open it), so the abuse surface is bounded in the rules rather than by auth. Ship
+[`firestore.rules`](firestore.rules) and [`storage.rules`](storage.rules) — they allow only the
+two upload folders and the `shareMappings` collection, validate each write's shape and size,
+forbid enumeration, edits and deletes, and deny everything else.
+
+```bash
+firebase deploy --only firestore:rules,storage
+```
 
 ## Browser support
 

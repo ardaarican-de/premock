@@ -1,0 +1,36 @@
+rules_version = '2';
+
+// Cloud Storage security rules for PreMock uploads.
+//
+// Uploaded prototypes (HTML) and background images must be publicly readable so a
+// share-link recipient can load them, and uploads are unauthenticated by design.
+// These rules keep that working while bounding the damage: only the two upload
+// folders are writable, with a size cap and a content-type check on each, and
+// nothing can be overwritten or deleted. Everything else is denied.
+//
+// Deploy: firebase deploy --only storage
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Uploaded HTML prototypes — read by the iframe, written once on upload.
+    match /uploads/html/{file} {
+      allow read:   if true;
+      allow create: if request.resource.size < 5 * 1024 * 1024
+                    && request.resource.contentType.matches('text/html.*');
+      allow update, delete: if false;
+    }
+
+    // Uploaded background images.
+    match /uploads/images/{file} {
+      allow read:   if true;
+      allow create: if request.resource.size < 10 * 1024 * 1024
+                    && request.resource.contentType.matches('image/.*');
+      allow update, delete: if false;
+    }
+
+    // Default deny.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

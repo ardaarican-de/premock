@@ -1,0 +1,39 @@
+rules_version = '2';
+
+// Firestore security rules for PreMock share links.
+//
+// Share links are unauthenticated by design: anyone can create a share and anyone
+// with the id can open it. These rules keep that working while closing the obvious
+// abuse vectors — no enumeration, no edits/deletes, shape + size validation on writes,
+// and everything outside `shareMappings` is locked down.
+//
+// Deploy: firebase deploy --only firestore:rules
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // A share record is a small, immutable map of {proto, title?, device?, statusbar?,
+    // sbink?, bg?} plus the server-set createdAt. Reject anything that doesn't fit so a
+    // hostile client can't balloon documents or smuggle extra fields.
+    function isValidShare(d) {
+      return d.keys().hasOnly(['proto', 'title', 'device', 'statusbar', 'sbink', 'bg', 'createdAt'])
+        && d.proto is string && d.proto.size() > 0 && d.proto.size() < 2048
+        && (!('title' in d)     || (d.title is string && d.title.size() < 256))
+        && (!('device' in d)    || d.device in ['ios', 'android'])
+        && (!('statusbar' in d) || d.statusbar is bool)
+        && (!('sbink' in d)     || d.sbink in ['auto', 'light', 'dark'])
+        && (!('bg' in d)        || (d.bg is string && d.bg.size() < 2048));
+    }
+
+    match /shareMappings/{id} {
+      allow get:    if true;                                   // open any share link
+      allow list:   if false;                                  // but never enumerate them
+      allow create: if isValidShare(request.resource.data);    // validated, one-time write
+      allow update, delete: if false;                          // shares are immutable
+    }
+
+    // Default deny — nothing else is reachable.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
