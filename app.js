@@ -795,13 +795,25 @@
     }catch(e){ return null; }
   }
   function capTitle(s,n=40){ return (s && s.length>n) ? s.slice(0,n-1).trimEnd()+'…' : s; }
+  // Accept a typed link with or without a scheme: "example.com", "example.com/path"
+  // and "https://example.com" all resolve to a loadable https URL. null if it isn't one.
+  function normalizeUrl(raw){
+    if(/^https?:\/\//i.test(raw)){ try{ new URL(raw); return raw; }catch(e){ return null; } }
+    // bare host (a dot, no whitespace) → assume https
+    if(/^[^\s]+\.[^\s]+$/.test(raw) && !raw.includes('<')){
+      try{ const u=new URL('https://'+raw); if(/^[^.]+\.[^.]+/.test(u.hostname)) return u.href; }catch(e){}
+    }
+    return null;
+  }
   function classify(raw){
     raw=raw.trim(); if(!raw) return null;
-    if(/^https?:\/\//i.test(raw)){
-      const embedSrc=figmaEmbedURL(raw);
-      return embedSrc ? {type:'url',src:raw,embedSrc:embedSrc,provider:'figma',title:capTitle(figmaTitle(raw))} : {type:'url',src:raw};
+    if(/^</.test(raw)) return {type:'html',src:raw};       // pasted HTML markup
+    const url=normalizeUrl(raw);                            // Figma link OR any normal website
+    if(url){
+      const embedSrc=figmaEmbedURL(url);
+      return embedSrc ? {type:'url',src:url,embedSrc:embedSrc,provider:'figma',title:capTitle(figmaTitle(url))} : {type:'url',src:url};
     }
-    if(raw.includes('<')) return {type:'html',src:raw};
+    if(raw.includes('<')) return {type:'html',src:raw};    // markup that didn't lead with <
     return null;
   }
   function titleFor(it,i=0){
