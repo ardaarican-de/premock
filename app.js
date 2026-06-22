@@ -6,6 +6,8 @@
   };
   // iframe logical resolution — 375×812, shared by both devices.
   const VIEWPORT_W=375, VIEWPORT_H=812, PREVIEW_H=VIEWPORT_H;
+  const REMOTE_TOP_INSET=50;   // top inset for embedded normal websites (room for their own header); Figma prototypes get none
+  let frameTopInset=0;          // current iframe top inset, set by showURL/showHTML
   const BLEED=1;   // grow the viewport 1px on every side so content tucks under the bezel
   // Mutable geometry for the active device (set by applyDevice).
   let IMG_W,IMG_H,SCR_L,SCR_T,SCR_W,SCR_H,SCR_CX,SCR_CY,DISP_W,DISP_H,FIT;
@@ -77,8 +79,23 @@
   }, { passive: true });
 
   // Hide the top-left brand and bottom-left dock while the cursor is over the screen.
-  viewportEl.addEventListener('mouseenter', () => document.body.classList.add('screen-hover'));
-  viewportEl.addEventListener('mouseleave', () => document.body.classList.remove('screen-hover'));
+  viewportEl.addEventListener('mouseenter', () => {
+    document.body.classList.add('screen-hover');
+    if(document.body.classList.contains('remote-frame')){
+      customCursor.classList.remove('visible','pressed');
+    }
+  });
+  viewportEl.addEventListener('mouseleave', e => {
+    document.body.classList.remove('screen-hover');
+    if(document.body.classList.contains('remote-frame')){
+      moveCursor(e.clientX,e.clientY);
+    }
+  });
+  frame.addEventListener('mouseenter',()=>{
+    if(document.body.classList.contains('remote-frame')){
+      customCursor.classList.remove('visible','pressed');
+    }
+  });
 
   // Status bar toggle (bottom-right) — overlay the iPhone status bar on the screen.
   const statusBarToggle=document.getElementById('statusBarToggle');
@@ -205,7 +222,8 @@
     mock.src=d.src;
 
     frame.style.width=VIEWPORT_W+'px';
-    frame.style.height=PREVIEW_H+'px';
+    frame.style.height=(PREVIEW_H-frameTopInset)+'px';
+    frame.style.marginTop=frameTopInset+'px';
     frame.style.transform='scale('+FIT+')';
     viewportEl.style.width =DISP_W+'px';
     viewportEl.style.height=DISP_H+'px';
@@ -331,6 +349,10 @@
     frame.onload=attachFrameCursor;
     frame.srcdoc=fixedPreviewHTML(html);
     cursorShield.classList.remove('active');
+    document.body.classList.remove('remote-frame');
+    frameTopInset=0;
+    frame.style.height=PREVIEW_H+'px';
+    frame.style.marginTop='0px';
     empty.classList.add('hidden');
     resetBtn.disabled=false;
     resetInkForPrototype();
@@ -339,9 +361,38 @@
     if(name){filename.textContent=cleanName;filepill.classList.add('show');}
     syncSaveBtn(); syncShareBtn();
   }
+
+  // Firebase-hosted HTML is fetched and rendered as same-origin srcdoc. This keeps
+  // the custom cursor while allowing the iframe to receive real pointer and wheel
+  // events directly; an overlay cannot faithfully forward the first pointerdown.
+  function showHostedHTMLContent(html,url,name,storagePath){
+    showHTML(html,name);
+    current.type='url';
+    current.src=url;
+    current.html=html;
+    if(storagePath) current.storagePath=storagePath;
+    syncSaveBtn();
+    syncShareBtn();
+  }
+
+  async function showHostedHTML(url,name,storagePath){
+    try{
+      const response=await fetch(url);
+      if(!response.ok) throw new Error('HTML fetch failed: '+response.status);
+      const html=await response.text();
+      showHostedHTMLContent(html,url,name,storagePath);
+      return true;
+    }catch(err){
+      console.warn('Interactive HTML preview unavailable; using remote iframe.',err);
+      showURL(url,name,storagePath);
+      return false;
+    }
+  }
+
   function restartPrototype(){
     if(!current) return;                                  // reload the shown prototype, don't return to selection
-    if(current.type==='url') showURL(current.src,current.title);
+    if(current.type==='url' && current.html) showHostedHTMLContent(current.html,current.src,current.title,current.storagePath);
+    else if(current.type==='url') showURL(current.src,current.title,current.storagePath);
     else showHTML(current.src,current.title);
   }
   const ringDefault=drop.querySelector('.ring').innerHTML;
@@ -401,12 +452,13 @@
     if(status){ status.textContent='Uploading HTML to Firebase...'; }
     showUploadToast('Uploading HTML…');
     try{
+      const html=await file.text();
       const {downloadURL, path} = await window.uploadFileToFirebase(file,'html',setUploadProgress);
       finishUploadToast();
       if(status){ setTimeout(()=>{ status.innerHTML=ringDefault; }, 1600); }
       const publicUrl = path && window.firebaseStoragePublicUrl ? window.firebaseStoragePublicUrl(path) : downloadURL;
       const storagePath = path || null;
-      showURL(publicUrl,file.name,storagePath);
+      showHostedHTMLContent(html,publicUrl,file.name,storagePath);
     }catch(err){
       hideUploadToast();
       if(status){ status.textContent='Firebase upload failed'; }
@@ -715,11 +767,16 @@
     frameLoader.classList.add('show');
     loaderMaxTimer=setTimeout(()=>frameLoader.classList.remove('show'), 12000);
     frame.removeAttribute('srcdoc'); frame.src=displaySrcFor({type:'url',src:url});
-    // Every cross-origin frame (Figma, uploaded HTML, or a normal website) keeps the cursor
-    // shield so the custom dot always shows — the browser won't let us track the mouse inside
-    // another origin's frame any other way. Scrolling passes through via the shield's wheel
-    // handler (drops pointer-events while the wheel is active).
-    cursorShield.classList.add('active');
+    // A transparent overlay cannot forward a trusted pointerdown to a cross-origin iframe:
+    // removing it after pointerdown makes every first click feel late. Let remote websites
+    // receive pointer, drag and wheel events directly and fall back to their native cursor.
+    cursorShield.classList.remove('active');
+    document.body.classList.add('remote-frame');
+    // Figma prototypes already render at the right offset; only normal sites need the top inset.
+    frameTopInset=(figmaEmbedURL(url) ? 0 : REMOTE_TOP_INSET);
+    frame.style.height=(PREVIEW_H-frameTopInset)+'px';
+    frame.style.marginTop=frameTopInset+'px';
+    customCursor.classList.remove('visible','pressed');
     empty.classList.add('hidden'); resetBtn.disabled=false;
     resetInkForPrototype();
     current={type:'url',src:url,title:title||url};
@@ -747,6 +804,7 @@
     }
   };
   let items=[];
+  let renaming=false;   // true while a gallery title is being edited inline
   const persist=()=>store.set('gallery',JSON.stringify(items));
 
   function figmaEmbedURL(url){
@@ -784,8 +842,15 @@
     if(it.oembed || !(it.provider==='figma'||figmaEmbedURL(it.src))) return;
     fetchFigmaName(it.src).then(name=>{
       it.oembed=true;
-      if(name && name!==it.title && items.includes(it)){ it.title=capTitle(name); persist(); render(); }
-      else persist();
+      if(name && name!==it.title && items.includes(it)){
+        it.title=capTitle(name);
+        // Update only this card's label. Rebuilding the entire gallery here reloads
+        // every thumbnail iframe once for each async Figma title response.
+        const card=Array.from(galGrid.children).find(el=>el._galleryItem===it);
+        const label=card&&card.querySelector('.ptitle:not(.prename)');
+        if(label) label.textContent=decodeName(titleFor(it,items.indexOf(it)));
+      }
+      persist();
     });
   }
   function figmaTitle(url){
@@ -843,6 +908,7 @@
     galEmpty.style.display=items.length?'none':'block';
     items.forEach((it,i)=>{
       const card=document.createElement('button'); card.className='protocard'; card.type='button';
+      card._galleryItem=it;
       const thumb=document.createElement('div'); thumb.className='thumb';
       const f=document.createElement('iframe');
       f.setAttribute('sandbox','allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-popups');
@@ -852,6 +918,7 @@
       const badge=document.createElement('span'); badge.className='badge';
       badge.textContent=(it.provider==='figma'||figmaEmbedURL(it.src))?'figma':(it.type==='url'?'link':'html');
       thumb.appendChild(badge);
+      if(it.example){ const demo=document.createElement('span'); demo.className='demotag'; demo.textContent='demo'; thumb.appendChild(demo); }
       const rm=document.createElement('button'); rm.className='premove'; rm.type='button'; rm.textContent='×'; rm.title='Remove';
       rm.addEventListener('click',e=>{e.stopPropagation();items.splice(i,1);persist();render();});
       const t=document.createElement('span'); t.className='ptitle'; t.textContent=decodeName(titleFor(it,i));
@@ -860,7 +927,7 @@
       ed.addEventListener('click',e=>{ e.stopPropagation(); startRename(it,t); });
       const trow=document.createElement('div'); trow.className='trow'; trow.appendChild(t); trow.appendChild(ed);
       card.appendChild(thumb); card.appendChild(rm); card.appendChild(trow);
-      card.addEventListener('click',()=>openItem(it));
+      card.addEventListener('click',()=>{ if(renaming) return; openItem(it); });   // Space inside the rename input can activate the card <button>; ignore it while editing
       galGrid.appendChild(card);
     });
     syncSaveBtn();
@@ -869,11 +936,13 @@
     const input=document.createElement('input'); input.type='text'; input.className='ptitle prename';
     input.value=span.textContent; span.replaceWith(input);
     input.focus(); input.select();
+    renaming=true;   // keep the sheet open while editing — don't let mouseleave/click-outside close it
     let done=false;
     const commit=keep=>{
       if(done) return; done=true;
-      if(keep){ const v=input.value.trim(); if(v){ it.title=v; it.oembed=true; persist(); } }  // oembed flag: keep manual name, don't let Figma overwrite it
-      render();
+      renaming=false;
+      if(keep){ const v=input.value.trim(); if(v){ it.title=v; it.oembed=true; persist(); span.textContent=decodeName(v); } }  // oembed flag: keep manual name, don't let Figma overwrite it
+      input.replaceWith(span);   // restore the title in place; don't re-render (it would reload every preview iframe)
     };
     input.addEventListener('click',e=>e.stopPropagation());
     input.addEventListener('keydown',e=>{ e.stopPropagation(); if(e.key==='Enter') commit(true); else if(e.key==='Escape') commit(false); });
@@ -914,23 +983,26 @@
   galInput.addEventListener('keydown',e=>{ if(e.key==='Enter') addFromInput(); });
   syncGalAdd();
   document.addEventListener('keydown',e=>{ if(e.key==='Escape' && sheet.classList.contains('open')) closeSheet(); });
-  document.addEventListener('click',e=>{ if(sheet.classList.contains('open') && !sheet.contains(e.target) && !e.target.closest('#galleryBtn') && !e.target.closest('#guidePop')) closeSheet(); });
-  // close the gallery when the cursor leaves the sheet (but not while a confirm dialog is up)
-  sheet.addEventListener('mouseleave',()=>{ if(sheet.classList.contains('open') && !confirmPop.classList.contains('open')) closeSheet(); });
+  document.addEventListener('click',e=>{ if(sheet.classList.contains('open') && !renaming && !sheet.contains(e.target) && !e.target.closest('#galleryBtn') && !e.target.closest('#guidePop')) closeSheet(); });
+  // close the gallery when the cursor leaves the sheet (but not while a confirm dialog is up or a title is being renamed)
+  sheet.addEventListener('mouseleave',()=>{ if(sheet.classList.contains('open') && !confirmPop.classList.contains('open') && !renaming) closeSheet(); });
 
   // Fixed example prototypes — shown in the gallery by default (before anything is saved).
   // The HTML one ships in example-prototype.js as a <script> so it works on file:// without
   // a server (a fetch would be CORS-blocked there); the Figma one is a hosted prototype link.
-  const FIGMA_EXAMPLE={...classify('https://www.figma.com/proto/vTmm4cHysm2Wjmtadi6fcL/B-M---App?node-id=547-3831&viewport=1057%2C511%2C0.28&t=S724q85d7QmIdY3U-8&scaling=scale-down-width&content-scaling=fixed&starting-point-node-id=547%3A3831&show-proto-sidebar=1&page-id=533%3A5123&hide-ui=1'), title:'Figma Example', oembed:true};
+  const FIGMA_EXAMPLE={...classify('https://www.figma.com/proto/vTmm4cHysm2Wjmtadi6fcL/B-M---App?node-id=547-3831&viewport=1057%2C511%2C0.28&t=S724q85d7QmIdY3U-8&scaling=scale-down-width&content-scaling=fixed&starting-point-node-id=547%3A3831&show-proto-sidebar=1&page-id=533%3A5123&hide-ui=1'), title:'Figma Example', oembed:true, example:true};
   (async()=>{
     const saved=await store.get('gallery');
     if(saved){ try{items=JSON.parse(saved)||[];}catch(e){} }
-    // Ensure both fixed examples are present in the gallery (even after a prior save).
-    if(FIGMA_EXAMPLE.type && !items.some(it=>it.src===FIGMA_EXAMPLE.src)){
-      items.unshift(FIGMA_EXAMPLE);
+    // Ensure both fixed examples are present in the gallery (even after a prior save),
+    // and that each carries the example flag (older saves predate the 'demo' tag).
+    if(FIGMA_EXAMPLE.type){
+      const existing=items.find(it=>it.src===FIGMA_EXAMPLE.src);
+      if(existing) existing.example=true; else items.unshift(FIGMA_EXAMPLE);
     }
-    if(window.__EXAMPLE_HTML__ && !items.some(it=>it.example)){
-      items.unshift({type:'html', src:window.__EXAMPLE_HTML__, title:'Example', example:true});
+    if(window.__EXAMPLE_HTML__){
+      const existing=items.find(it=>it.src===window.__EXAMPLE_HTML__);
+      if(existing) existing.example=true; else items.unshift({type:'html', src:window.__EXAMPLE_HTML__, title:'Example', example:true});
     }
     render(); items.forEach(refreshFigmaTitle);
   })();
@@ -1097,7 +1169,10 @@
     applyBgState(shareData.bg);
     if(shareData.statusbar){ document.body.classList.add('statusbar-on'); statusBarToggle.setAttribute('aria-pressed','true'); }
     if(shareData.sbink==='light' || shareData.sbink==='dark') setStatusBarInk(shareData.sbink,true);
-    showURL(protoUrl, shareData.title||undefined, shareData.proto);
+    const hostedUpload=!shareData.proto.startsWith('http') ||
+      /firebasestorage\.googleapis\.com/i.test(protoUrl);
+    if(hostedUpload) await showHostedHTML(protoUrl,shareData.title||undefined,shareData.proto);
+    else showURL(protoUrl, shareData.title||undefined, shareData.proto);
     return true;
   }
   // First-run empty state ("Drop your HTML"): the phone screen is dark, so default the

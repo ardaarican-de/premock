@@ -48,6 +48,9 @@
     transform-origin:top left;  /* scale + border-radius set by JS */
     cursor:none !important;
   }
+  body.remote-frame .viewport,
+  body.remote-frame #frame{cursor:auto!important;}
+  body.remote-frame .viewport{background:#fff;}
 
   /* iPhone status bar overlay — sits at the top of the screen hole, masked by the
      hand bezel (z-index below .mock). Toggled via body.statusbar-on. */
@@ -173,6 +176,10 @@
     opacity:1;
   }
   .cursor-dot.visible{opacity:.65;}
+  body.remote-frame.screen-hover .cursor-dot{
+    opacity:0!important;
+    transition:opacity .08s ease;
+  }
 
   /* empty hint over the screen */
   .empty{
@@ -449,13 +456,14 @@
   .grid{display:flex;flex-wrap:nowrap;gap:14px;overflow-x:auto;overflow-y:hidden;margin:0 -18px;padding:8px 18px 18px;}
   .protocard{position:relative;flex:0 0 auto;padding:0;border:0;background:none;cursor:pointer;display:flex;flex-direction:column;gap:7px;font-family:var(--ui);width:110px;transition:opacity .2s ease;}
   .thumb{position:relative;width:110px;height:238px;border-radius:15px;overflow:hidden;isolation:isolate;background:#0c0c0e;box-shadow:inset 0 0 0 1px var(--glass-line);transition:transform .15s ease,box-shadow .15s ease;-webkit-mask-image:-webkit-radial-gradient(#fff,#000);mask-image:radial-gradient(#fff,#000);}
-  .protocard:hover .thumb{transform:translateY(-3px);box-shadow:inset 0 0 0 1px var(--accent);}
+  .protocard:hover .thumb{transform:translateY(-3px);}
   /* while browsing previews, dim the others so the hovered one stays in focus;
      when nothing is hovered they all stay at full opacity */
   .grid:has(.protocard:hover) .protocard{opacity:.4;}
   .grid:has(.protocard:hover) .protocard:hover{opacity:1;}
   .thumb iframe{position:absolute;top:0;left:0;width:375px;height:812px;border:0;transform:scale(.29333);transform-origin:top left;pointer-events:none;}
   .thumb .badge{position:absolute;left:0;right:0;bottom:0;padding:20px 7px 6px;font-size:9px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6);background:linear-gradient(180deg,transparent,rgba(0,0,0,.85));border-radius:0 0 14px 14px;}
+  .thumb .demotag{position:absolute;top:7px;left:7px;padding:2px 7px;font-size:9px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#fff;background:rgba(0,0,0,.62);border-radius:8px;z-index:2;pointer-events:none;}
   .trow{display:flex;align-items:center;justify-content:center;gap:3px;width:100%;padding-left:19px;}
   .trow:has(.prename){padding-left:0;}
   .ptitle{font-size:11.5px;color:var(--text-on-glass);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
