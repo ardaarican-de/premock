@@ -753,30 +753,47 @@
   });
   // close when the cursor leaves the popover (same as the gallery sheet / palette)
   bgPopover.addEventListener('mouseleave',()=>{ if(bgPopover.classList.contains('open')) closeBg(); });
-  // hovering a different dock button closes an open popover so its tooltip stays readable
+  // hovering a different dock button closes an open popover (so its tooltip stays readable)
+  // and the prototype gallery — switching menus shouldn't leave a panel hanging open.
   document.querySelector('.dock').addEventListener('mouseover',e=>{
     const btn=e.target.closest('button'); if(!btn) return;
     if(palettePopover.classList.contains('open') && !btn.classList.contains('sw-palette')) closePalette();
     if(bgPopover.classList.contains('open') && !btn.classList.contains('sw-custom')) closeBg();
+    if(sheet.classList.contains('open') && btn.id!=='galleryBtn' && !renaming && !confirmPop.classList.contains('open')) closeSheet();
   });
 
   // ---- prototype gallery ----
+  // Firebase-hosted HTML uploads come back as url-type items, but they're our own uploaded
+  // HTML — not external websites. Detect them by their storage URL so they render and badge
+  // like local HTML (no top inset, circle cursor, "html" tag), not a generic "link".
+  const isHostedHTMLUrl=url=>/firebasestorage\.googleapis\.com/i.test(url||'');
   function showURL(url,title, storagePath){
+    // A Firebase-hosted upload is our own HTML — even when we can't fetch it as srcdoc
+    // (cross-origin) and must load it via the iframe src, treat it like the local HTML
+    // preview, not a generic remote site: no top inset, and keep the custom circle cursor.
+    const hosted=isHostedHTMLUrl(url);
     frame.onload=null;
     clearTimeout(loaderMaxTimer);
     frameLoader.classList.add('show');
     loaderMaxTimer=setTimeout(()=>frameLoader.classList.remove('show'), 12000);
     frame.removeAttribute('srcdoc'); frame.src=displaySrcFor({type:'url',src:url});
-    // A transparent overlay cannot forward a trusted pointerdown to a cross-origin iframe:
-    // removing it after pointerdown makes every first click feel late. Let remote websites
-    // receive pointer, drag and wheel events directly and fall back to their native cursor.
-    cursorShield.classList.remove('active');
-    document.body.classList.add('remote-frame');
-    // Figma prototypes already render at the right offset; only normal sites need the top inset.
-    frameTopInset=(figmaEmbedURL(url) ? 0 : REMOTE_TOP_INSET);
+    if(hosted){
+      // The cursor shield sits over the cross-origin iframe (cursor:none) so the custom dot
+      // keeps tracking, and briefly drops pointer-events to forward clicks/scroll through.
+      cursorShield.classList.add('active');
+      document.body.classList.remove('remote-frame');
+    }else{
+      // A transparent overlay cannot forward a trusted pointerdown to a cross-origin iframe:
+      // removing it after pointerdown makes every first click feel late. Let remote websites
+      // receive pointer, drag and wheel events directly and fall back to their native cursor.
+      cursorShield.classList.remove('active');
+      document.body.classList.add('remote-frame');
+    }
+    // Hosted uploads and Figma prototypes already render at the right offset; only normal sites need the top inset.
+    frameTopInset=(hosted || figmaEmbedURL(url)) ? 0 : REMOTE_TOP_INSET;
     frame.style.height=(PREVIEW_H-frameTopInset)+'px';
     frame.style.marginTop=frameTopInset+'px';
-    customCursor.classList.remove('visible','pressed');
+    if(!hosted) customCursor.classList.remove('visible','pressed');
     empty.classList.add('hidden'); resetBtn.disabled=false;
     resetInkForPrototype();
     current={type:'url',src:url,title:title||url};
@@ -916,7 +933,7 @@
       if(galIO) galIO.observe(f); else f._load();
       thumb.appendChild(f);
       const badge=document.createElement('span'); badge.className='badge';
-      badge.textContent=(it.provider==='figma'||figmaEmbedURL(it.src))?'figma':(it.type==='url'?'link':'html');
+      badge.textContent=(it.provider==='figma'||figmaEmbedURL(it.src))?'figma':((it.type==='url'&&!isHostedHTMLUrl(it.src))?'link':'html');
       thumb.appendChild(badge);
       if(it.example){ const demo=document.createElement('span'); demo.className='demotag'; demo.textContent='demo'; thumb.appendChild(demo); }
       const rm=document.createElement('button'); rm.className='premove'; rm.type='button'; rm.textContent='×'; rm.title='Remove';
@@ -990,19 +1007,20 @@
   // Fixed example prototypes — shown in the gallery by default (before anything is saved).
   // The HTML one ships in example-prototype.js as a <script> so it works on file:// without
   // a server (a fetch would be CORS-blocked there); the Figma one is a hosted prototype link.
-  const FIGMA_EXAMPLE={...classify('https://www.figma.com/proto/vTmm4cHysm2Wjmtadi6fcL/B-M---App?node-id=547-3831&viewport=1057%2C511%2C0.28&t=S724q85d7QmIdY3U-8&scaling=scale-down-width&content-scaling=fixed&starting-point-node-id=547%3A3831&show-proto-sidebar=1&page-id=533%3A5123&hide-ui=1'), title:'Figma Example', oembed:true, example:true};
+  const FIGMA_EXAMPLE={...classify('https://www.figma.com/proto/vTmm4cHysm2Wjmtadi6fcL/B-M---App?node-id=547-3831&viewport=1057%2C511%2C0.28&t=S724q85d7QmIdY3U-8&scaling=scale-down-width&content-scaling=fixed&starting-point-node-id=547%3A3831&show-proto-sidebar=1&page-id=533%3A5123&hide-ui=1'), title:'Register Flow', oembed:true, example:true};
   (async()=>{
     const saved=await store.get('gallery');
     if(saved){ try{items=JSON.parse(saved)||[];}catch(e){} }
     // Ensure both fixed examples are present in the gallery (even after a prior save),
-    // and that each carries the example flag (older saves predate the 'demo' tag).
+    // and that each carries the example flag (older saves predate the 'demo' tag) and the
+    // current demo name (older saves predate the rename).
     if(FIGMA_EXAMPLE.type){
       const existing=items.find(it=>it.src===FIGMA_EXAMPLE.src);
-      if(existing) existing.example=true; else items.unshift(FIGMA_EXAMPLE);
+      if(existing){ existing.example=true; existing.title='Register Flow'; existing.oembed=true; } else items.unshift(FIGMA_EXAMPLE);
     }
     if(window.__EXAMPLE_HTML__){
       const existing=items.find(it=>it.src===window.__EXAMPLE_HTML__);
-      if(existing) existing.example=true; else items.unshift({type:'html', src:window.__EXAMPLE_HTML__, title:'Example', example:true});
+      if(existing){ existing.example=true; existing.title='Meridian Concept'; } else items.unshift({type:'html', src:window.__EXAMPLE_HTML__, title:'Meridian Concept', example:true});
     }
     render(); items.forEach(refreshFigmaTitle);
   })();
@@ -1113,7 +1131,7 @@
       filepill.classList.remove('is-copied');
       filename.style.maxWidth=nameW+'px'; copiedLabel.style.maxWidth='0px';   // animate back in sync
       setTimeout(()=>{ filename.style.maxWidth=''; copiedLabel.style.maxWidth=''; },420);   // release the locks after the (delayed) fade-in completes
-      shareBtn.classList.remove('copied','swapping'); shareBtn.innerHTML=ICON_SHARE; shareBtn.setAttribute('data-tip','Share prototype');
+      shareBtn.classList.remove('copied','swapping'); shareBtn.innerHTML=ICON_SHARE; shareBtn.setAttribute('data-tip','Send');
     },3400);
     try{ await navigator.clipboard.writeText(link); }
     catch(e){ const ta=document.createElement('textarea'); ta.value=link; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(_){} ta.remove(); }
