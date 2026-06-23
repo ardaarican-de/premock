@@ -513,6 +513,22 @@
   body.dark .intro-credit:hover{color:rgba(244,241,234,.8);}
   body.dark .intro-credit:hover b{color:#f4f1ea;}
 
+  /* Shared-link loading line — a minimal bar under the intro text that fills while the
+     scene's background image loads; the hand mockup comes in once it completes. */
+  .intro-progress{
+    position:fixed;z-index:1;top:calc(50% + 92px);left:50%;
+    transform:translateX(-50%);
+    width:230px;height:2px;border-radius:2px;
+    background:rgba(26,23,20,.12);overflow:hidden;
+    opacity:0;pointer-events:none;
+  }
+  .intro-progress-bar{
+    display:block;height:100%;width:0;border-radius:2px;
+    background:rgba(26,23,20,.5);
+  }
+  body.dark .intro-progress{background:rgba(244,241,234,.16);}
+  body.dark .intro-progress-bar{background:rgba(244,241,234,.62);}
+
   /* "desktop only" notice — hidden by default, shown on touch devices */
   .desktop-only{
     position:fixed;z-index:2;top:calc(50% + 100px);left:50%;

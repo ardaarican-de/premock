@@ -233,37 +233,66 @@
     fit();
   }
 
-  // fit the phone in the viewport, centered on the SCREEN (let the wrist bleed off-screen)
-  let fitAnimated=false;
+  // fit the phone in the viewport, centered on the SCREEN (let the wrist bleed off-screen).
+  // Until the stage "enters" (after the intro / background load) the hand is parked just below.
+  let stageEntered=false, lastFit={tx:0,ty:0,s:1};
   function fit(){
     const s=Math.min((window.innerHeight*0.86)/SCR_H,(window.innerWidth*0.94)/IMG_W);
     const tx=window.innerWidth/2 - s*SCR_CX;
     const ty=window.innerHeight/2 - s*SCR_CY;
-    if(!fitAnimated){
-      fitAnimated=true;
-      unit.style.transition='none';
-      unit.style.transform='translate('+tx+'px,'+(ty+window.innerHeight)+'px) scale('+s+')';
-      unit.offsetHeight; // force reflow
-      setTimeout(()=>{
-        unit.style.transition='transform 2.4s cubic-bezier(0.22,1,0.36,1)';
-        requestAnimationFrame(()=>{
-          unit.style.transform='translate('+tx+'px,'+ty+'px) scale('+s+')';
-          unit.addEventListener('transitionend',()=>{ unit.style.transition='none'; },{once:true});
-        });
-      },2400);
-    } else {
-      unit.style.transition='none';
+    lastFit={tx,ty,s};
+    unit.style.transition='none';
+    const y = stageEntered ? ty : ty + window.innerHeight;
+    unit.style.transform='translate('+tx+'px,'+y+'px) scale('+s+')';
+  }
+  // Slide the hand mockup up into place, then reveal the chrome once it arrives (2.4s later).
+  function enterStage(){
+    if(stageEntered) return; stageEntered=true;
+    const {tx,ty,s}=lastFit;
+    unit.offsetHeight; // commit the parked position before transitioning
+    unit.style.transition='transform 2.4s cubic-bezier(0.22,1,0.36,1)';
+    requestAnimationFrame(()=>{
       unit.style.transform='translate('+tx+'px,'+ty+'px) scale('+s+')';
-    }
+      unit.addEventListener('transitionend',()=>{ unit.style.transition='none'; },{once:true});
+    });
+    setTimeout(()=>{
+      document.querySelector('.brand').classList.remove('ui-hidden');
+      document.querySelector('.dock').classList.remove('ui-hidden');
+      document.querySelector('.right-dock').classList.remove('ui-hidden');
+    },2400);
   }
   applyDevice('ios'); window.addEventListener('resize',fit);
 
-  // brand + dock → 2400ms (hand start) + 2400ms (hand duration) = show UI when hand arrives
-  setTimeout(()=>{
-    document.querySelector('.brand').classList.remove('ui-hidden');
-    document.querySelector('.dock').classList.remove('ui-hidden');
-    document.querySelector('.right-dock').classList.remove('ui-hidden');
-  },4800);
+  // Kick off the hand entrance. A shared link with an image background drives a minimal loading
+  // bar under the intro text while that image loads, then brings the hand in; everything else
+  // (home, solid/preset backgrounds) just uses the original timed entrance.
+  const introProgress=document.getElementById('introProgress');
+  const introProgressBar=introProgress?introProgress.querySelector('.intro-progress-bar'):null;
+  function beginEntrance(bgImage){
+    if(!bgImage || !introProgress){ setTimeout(enterStage, 2400); return; }
+    const credit=document.querySelector('.intro-credit');
+    if(credit && credit.offsetWidth) introProgress.style.width=credit.offsetWidth+'px';   // as long as the texts
+    introProgress.hidden=false;
+    introProgress.style.transition='opacity .5s ease';
+    requestAnimationFrame(()=>{ introProgress.style.opacity='1'; });
+    introProgressBar.style.transition='width 1.4s cubic-bezier(.4,0,.2,1)';
+    requestAnimationFrame(()=>{ introProgressBar.style.width='86%'; });
+    const t0=performance.now();
+    let loaded=false, done=false;
+    const complete=()=>{
+      if(done) return; done=true;
+      introProgressBar.style.transition='width .3s ease';
+      introProgressBar.style.width='100%';
+      setTimeout(()=>{ introProgress.style.opacity='0'; enterStage(); }, 340);
+    };
+    // hold the bar for at least ~900ms so the load reads as a process, then finish on image load
+    const tryFinish=()=>{ if(loaded && performance.now()-t0>=900) complete(); };
+    const onLoaded=()=>{ loaded=true; tryFinish(); };
+    const img=new Image();
+    img.onload=onLoaded; img.onerror=onLoaded; img.src=bgImage;
+    setTimeout(tryFinish, 900);
+    setTimeout(complete, 6000);   // safety: never hang on a stalled image
+  }
 
   // Clicking the PreMock wordmark goes back to a fresh home screen — like re-entering the
   // site. From a share link (/?id) it navigates home; on home it just refreshes.
@@ -301,13 +330,12 @@
     }catch(e){}
   }
 
-  function attachFrameCursor(){
+  // Hide scrollbars and scale the prototype up to fill the frame. Shared by both the custom-
+  // cursor preview and the native-cursor (hosted HTML) preview, which only differ in the cursor.
+  function fitFrameContent(){
     try{
       const doc=frame.contentDocument;
       if(!doc) return;
-      const style=doc.createElement("style");
-      style.textContent="*{cursor:none!important;}";
-      doc.head.appendChild(style);
       hideScrollbars(doc);
       requestAnimationFrame(()=>{
         hideScrollbars(doc);
@@ -324,6 +352,17 @@
           target.style.transform="scale("+cover+")";
         }
       });
+    }catch(e){}
+  }
+
+  function attachFrameCursor(){
+    fitFrameContent();
+    try{
+      const doc=frame.contentDocument;
+      if(!doc) return;
+      const style=doc.createElement("style");
+      style.textContent="*{cursor:none!important;}";
+      doc.head.appendChild(style);
       doc.addEventListener("mousemove",e=>{
         const rect=frame.getBoundingClientRect();
         cursorActive=true;
@@ -339,20 +378,26 @@
 
   let current=null;
 
-  function fixedPreviewHTML(html){
-    const fixedStyle="<style data-preview-fixed-height>html,body{width:"+VIEWPORT_W+"px!important;height:"+PREVIEW_H+"px!important;min-height:"+PREVIEW_H+"px!important;margin:0!important;padding:0!important;overflow:hidden!important;}body{position:relative!important;display:flex!important;align-items:center!important;justify-content:center!important;background:#fff!important;}body>div:first-of-type,body>main:first-of-type,#root,#__next{width:100%!important;height:100%!important;min-height:100%!important;margin:0!important;padding:0!important;flex:none!important;max-width:none!important;transform-origin:center center!important;overflow-y:auto!important;overflow-x:hidden!important;}#root>div:first-child,#__next>div:first-child,body>div:first-of-type>div:first-child{margin:0!important;padding:0!important;}*{cursor:none!important;}*{scrollbar-width:none!important;-ms-overflow-style:none!important;}*::-webkit-scrollbar{display:none!important;width:0!important;height:0!important;}</style>";
+  function fixedPreviewHTML(html,nativeCursor){
+    // nativeCursor: leave the page's own cursor alone (hosted HTML shows the default OS
+    // cursor, like a Figma iframe); otherwise hide it so only the custom circle shows.
+    const cursorRule=nativeCursor ? "" : "*{cursor:none!important;}";
+    const fixedStyle="<style data-preview-fixed-height>html,body{width:"+VIEWPORT_W+"px!important;height:"+PREVIEW_H+"px!important;min-height:"+PREVIEW_H+"px!important;margin:0!important;padding:0!important;overflow:hidden!important;}body{position:relative!important;display:flex!important;align-items:center!important;justify-content:center!important;background:#fff!important;}body>div:first-of-type,body>main:first-of-type,#root,#__next{width:100%!important;height:100%!important;min-height:100%!important;margin:0!important;padding:0!important;flex:none!important;max-width:none!important;transform-origin:center center!important;overflow-y:auto!important;overflow-x:hidden!important;}#root>div:first-child,#__next>div:first-child,body>div:first-of-type>div:first-child{margin:0!important;padding:0!important;}"+cursorRule+"*{scrollbar-width:none!important;-ms-overflow-style:none!important;}*::-webkit-scrollbar{display:none!important;width:0!important;height:0!important;}</style>";
     return /<\/head>/i.test(html) ? html.replace(/<\/head>/i,fixedStyle+'</head>') : fixedStyle+html;
   }
 
-  function showHTML(html,name){
+  function showHTML(html,name,nativeCursor){
     frameLoader.classList.remove('show');
-    frame.onload=attachFrameCursor;
-    frame.srcdoc=fixedPreviewHTML(html);
+    // Hosted HTML keeps the page's native cursor (no custom circle), like a Figma iframe;
+    // local/pasted HTML uses the custom circle that the parent tracks over the srcdoc.
+    frame.onload=nativeCursor?fitFrameContent:attachFrameCursor;
+    frame.srcdoc=fixedPreviewHTML(html,nativeCursor);
     cursorShield.classList.remove('active');
-    document.body.classList.remove('remote-frame');
+    document.body.classList.toggle('remote-frame', !!nativeCursor);
     frameTopInset=0;
     frame.style.height=PREVIEW_H+'px';
     frame.style.marginTop='0px';
+    if(nativeCursor) customCursor.classList.remove('visible','pressed');
     empty.classList.add('hidden');
     resetBtn.disabled=false;
     resetInkForPrototype();
@@ -366,7 +411,7 @@
   // the custom cursor while allowing the iframe to receive real pointer and wheel
   // events directly; an overlay cannot faithfully forward the first pointerdown.
   function showHostedHTMLContent(html,url,name,storagePath){
-    showHTML(html,name);
+    showHTML(html,name,true);   // native cursor — render the hosted upload like a Figma iframe
     current.type='url';
     current.src=url;
     current.html=html;
@@ -764,36 +809,28 @@
 
   // ---- prototype gallery ----
   // Firebase-hosted HTML uploads come back as url-type items, but they're our own uploaded
-  // HTML — not external websites. Detect them by their storage URL so they render and badge
-  // like local HTML (no top inset, circle cursor, "html" tag), not a generic "link".
+  // HTML — not external websites. Detect them by their storage URL so they render without the
+  // top inset and are badged "html" (not "link"); the cursor is native, like a Figma iframe.
   const isHostedHTMLUrl=url=>/firebasestorage\.googleapis\.com/i.test(url||'');
   function showURL(url,title, storagePath){
-    // A Firebase-hosted upload is our own HTML — even when we can't fetch it as srcdoc
-    // (cross-origin) and must load it via the iframe src, treat it like the local HTML
-    // preview, not a generic remote site: no top inset, and keep the custom circle cursor.
+    // A Firebase-hosted upload is our own HTML — when we can't fetch it as srcdoc (cross-origin)
+    // and must load it via the iframe src, it still skips the top inset like a Figma embed.
     const hosted=isHostedHTMLUrl(url);
     frame.onload=null;
     clearTimeout(loaderMaxTimer);
     frameLoader.classList.add('show');
     loaderMaxTimer=setTimeout(()=>frameLoader.classList.remove('show'), 12000);
     frame.removeAttribute('srcdoc'); frame.src=displaySrcFor({type:'url',src:url});
-    if(hosted){
-      // The cursor shield sits over the cross-origin iframe (cursor:none) so the custom dot
-      // keeps tracking, and briefly drops pointer-events to forward clicks/scroll through.
-      cursorShield.classList.add('active');
-      document.body.classList.remove('remote-frame');
-    }else{
-      // A transparent overlay cannot forward a trusted pointerdown to a cross-origin iframe:
-      // removing it after pointerdown makes every first click feel late. Let remote websites
-      // receive pointer, drag and wheel events directly and fall back to their native cursor.
-      cursorShield.classList.remove('active');
-      document.body.classList.add('remote-frame');
-    }
+    // Remote websites, Figma embeds and hosted HTML uploads all run as a real iframe and use
+    // their native cursor: a transparent overlay can't forward a trusted first pointerdown to
+    // a cross-origin frame, so we let the iframe receive pointer/drag/wheel events directly.
+    cursorShield.classList.remove('active');
+    document.body.classList.add('remote-frame');
     // Hosted uploads and Figma prototypes already render at the right offset; only normal sites need the top inset.
     frameTopInset=(hosted || figmaEmbedURL(url)) ? 0 : REMOTE_TOP_INSET;
     frame.style.height=(PREVIEW_H-frameTopInset)+'px';
     frame.style.marginTop=frameTopInset+'px';
-    if(!hosted) customCursor.classList.remove('visible','pressed');
+    customCursor.classList.remove('visible','pressed');
     empty.classList.add('hidden'); resetBtn.disabled=false;
     resetInkForPrototype();
     current={type:'url',src:url,title:title||url};
@@ -909,7 +946,8 @@
     return 'Prototype '+(i+1);
   }
   function openItem(it){
-    if(it.type==='url') showURL(it.src,titleFor(it));
+    if(it.type==='url' && isHostedHTMLUrl(it.src)) showHostedHTML(it.src,titleFor(it),it.storagePath);
+    else if(it.type==='url') showURL(it.src,titleFor(it));
     else showHTML(it.src,titleFor(it));
     closeSheet();
   }
@@ -1146,6 +1184,7 @@
     }catch(e){ return false; }
   }
   // Restore shared state on load (?proto=…): device → background → status bar → open prototype.
+  let shareBgImage=null;   // background image URL of an opened share link (drives the intro loading bar)
   async function applyShared(){
     const q=new URLSearchParams(location.search);
     const rawQuery=location.search.slice(1);
@@ -1185,6 +1224,8 @@
     if(!shareData.proto.startsWith('http') && await protoFileMissing(protoUrl)){ showUnavailable(); return false; }
     if(shareData.device==='android') setDevice('android');
     applyBgState(shareData.bg);
+    // An image background (bg state "I<src>") is preloaded behind the intro loading bar.
+    shareBgImage = (shareData.bg && shareData.bg[0]==='I') ? shareData.bg.slice(1) : null;
     if(shareData.statusbar){ document.body.classList.add('statusbar-on'); statusBarToggle.setAttribute('aria-pressed','true'); }
     if(shareData.sbink==='light' || shareData.sbink==='dark') setStatusBarInk(shareData.sbink,true);
     const hostedUpload=!shareData.proto.startsWith('http') ||
@@ -1305,5 +1346,9 @@
 
   // open a shared prototype (?proto=… or ?id=…) once everything is wired up; otherwise start on
   // the empty state with the status bar on + dark ink by default
-  (async()=>{ if(!(await applyShared())) applyEmptyDefaults(); })();
+  (async()=>{
+    const shared = await applyShared();
+    if(!shared) applyEmptyDefaults();
+    beginEntrance(shared ? shareBgImage : null);
+  })();
 })();
