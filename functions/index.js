@@ -36,7 +36,9 @@ function isEmbeddable(headers, parentOrigin){
   if(xfo){
     if(xfo.includes('deny')) return false;
     if(xfo.includes('sameorigin')) return false;        // cross-origin parent → blocked
-    if(xfo.includes('allow-from')) return xfo.includes(host);
+    // ALLOW-FROM is obsolete: Chrome never supported it and Firefox dropped it, so modern
+    // browsers ignore it entirely (the page frames fine). Treat it as no XFO restriction and
+    // fall through to the CSP check — matching real browser behaviour.
   }
 
   const ancestors = parseFrameAncestors(headers.get('content-security-policy'));
