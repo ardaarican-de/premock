@@ -15,7 +15,7 @@
     --scrL:285px; --scrT:211px; --scrW:373px; --scrH:812px;
     --screen-radius:50px;  /* matches the iPhone screen corner in the photo */
   }
-  *{box-sizing:border-box;cursor:none!important;}
+  *{box-sizing:border-box;}
   html,body{height:100%;}
   body{margin:0;font-family:var(--ui);color:var(--ink);overflow:hidden;-webkit-font-smoothing:antialiased;}
 
@@ -40,16 +40,12 @@
     position:absolute;
     left:var(--scrL); top:var(--scrT); width:var(--scrW); height:var(--scrH);
     z-index:1; overflow:hidden; border-radius:50px; background:#0b0b0d;
-    cursor:none !important;
   }
   #frame{
     border:0; display:block; background:#fff;
     width:375px;                /* iframe logical width */
     transform-origin:top left;  /* scale + border-radius set by JS */
-    cursor:none !important;
   }
-  body.remote-frame .viewport,
-  body.remote-frame #frame{cursor:auto!important;}
   body.remote-frame .viewport{background:#fff;}
 
   /* iPhone status bar overlay — sits at the top of the screen hole, masked by the
@@ -156,30 +152,6 @@
   }
   .sb-ink-opt:hover{color:var(--text-on-glass);}
   .sb-ink-opt.is-active{color:var(--text-on-glass);}
-  .cursor-shield{position:absolute;inset:0;z-index:3;cursor:none;pointer-events:none;display:none;}
-  .cursor-shield.active{display:block;pointer-events:auto;}
-
-  .cursor-dot{
-    position:fixed;
-    top:0; left:0;
-    width:30px; height:30px;
-    border-radius:50%;
-    background:#000 !important;
-    pointer-events:none;
-    z-index:100;
-    transform:translate(-50%,-50%) scale(1);
-    transition:transform .1s cubic-bezier(0.22,1,0.36,1), opacity .15s ease;
-    opacity:0;
-  }
-  .cursor-dot.pressed{
-    transform:translate(-50%,-50%) scale(0.72);
-    opacity:1;
-  }
-  .cursor-dot.visible{opacity:.65;}
-  body.remote-frame.screen-hover .cursor-dot{
-    opacity:0!important;
-    transition:opacity .08s ease;
-  }
 
   /* empty hint over the screen */
   .empty{
@@ -560,11 +532,26 @@
   }
   @keyframes spin{to{transform:rotate(360deg);}}
 
+  /* Shown inside the phone when a site refuses to be framed (X-Frame-Options / CSP). */
+  .frame-block{
+    position:absolute;inset:0;z-index:3;
+    background:#0b0b0d;
+    display:flex;align-items:center;justify-content:center;
+    padding:36px 28px;
+    opacity:0;visibility:hidden;pointer-events:none;
+    transition:opacity .35s ease;
+  }
+  .frame-block.show{opacity:1;visibility:visible;pointer-events:auto;}
+  .fb-inner{display:flex;flex-direction:column;align-items:center;text-align:center;gap:16px;max-width:280px;}
+  .fb-shield{width:56px;height:56px;stroke:rgba(255,255,255,.9);}
+  .fb-title{margin:0;font-size:19px;font-weight:600;color:#fff;line-height:1.25;}
+  .fb-msg{margin:0;font-size:14px;line-height:1.55;color:rgba(255,255,255,.55);}
+
   @media (max-width:560px){.brand{display:none;}.btn-label{display:none;}.btn{padding:0 11px;}.btn-primary .btn-label{display:inline;}}
   /* touch devices (phones/tablets): PreMock needs a cursor, so gate it to desktop.
      Keep the intro title + credit, hide the interactive app, show the notice. */
   @media (hover:none) and (pointer:coarse){
-    #deviceUnit,#customCursor,#drop,.dock,.right-dock,.filepill,.brand,.sheet,.palette-popover,.bg-popover,.rec-pop{display:none!important;}
+    #deviceUnit,#drop,.dock,.right-dock,.filepill,.brand,.sheet,.palette-popover,.bg-popover,.rec-pop{display:none!important;}
     .desktop-only{display:flex;}
     .intro-title{font-size:56px;}
   }

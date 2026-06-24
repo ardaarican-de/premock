@@ -53,6 +53,17 @@ try {
   window.firebaseReady = false;
 }
 
+// Ask the embedCheck Cloud Function whether a URL allows being shown in an iframe
+// (reads its X-Frame-Options / CSP frame-ancestors headers server-side, with a browser
+// User-Agent). Returns { embeddable: true|false|null, reason, status }; embeddable:null
+// means "couldn't determine" so the caller falls back to its own heuristic.
+window.firebaseCheckEmbeddable = async function(url){
+  const endpoint = 'https://us-central1-' + firebaseConfig.projectId + '.cloudfunctions.net/embedCheck?url=' + encodeURIComponent(url);
+  const r = await fetch(endpoint);
+  if(!r.ok) throw new Error('embedCheck failed: ' + r.status);
+  return r.json();
+};
+
 window.uploadFileToFirebase = async function(file, type, onProgress) {
   const safeName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
   const folder = type === 'image' ? 'uploads/images' : 'uploads/html';

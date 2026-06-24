@@ -85,7 +85,7 @@
   <div id="scene" class="scene-studio"></div>
 
   <div id="deviceUnit">
-    <div class="viewport"><iframe id="frame" title="Preview" sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-modals"></iframe><div class="cursor-shield" id="cursorShield"></div><div class="frame-loader" id="frameLoader"><div class="loader-ring"></div></div></div>
+    <div class="viewport"><iframe id="frame" title="Preview" sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-modals"></iframe><div class="frame-loader" id="frameLoader"><div class="loader-ring"></div></div><div class="frame-block" id="frameBlock" aria-hidden="true"><div class="fb-inner"><svg class="fb-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><rect x="9" y="11" width="6" height="5" rx="1"/><path d="M10.5 11V9.5a1.5 1.5 0 0 1 3 0V11"/></svg><p class="fb-title">This site can’t be shown here</p><p class="fb-msg">It’s blocked from being embedded in other sites for security reasons.</p></div></div></div>
     <svg class="statusbar statusbar-ios" id="statusBar" width="375" height="54" viewBox="0 0 375 54" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <g class="sb-content">
         <path d="M283 28.5H284C284.552 28.5 285 28.9477 285 29.5V31.5C285 32.0523 284.552 32.5 284 32.5H283C282.448 32.5 282 32.0523 282 31.5V29.5C282 28.9477 282.448 28.5 283 28.5Z" fill="currentColor"/>
@@ -134,7 +134,6 @@
       <p>or add a Figma prototype link to your gallery</p>
     </div>
   </div>
-  <div id="customCursor" class="cursor-dot"></div>
 
   <div class="upload-toast" id="uploadToast" role="status" aria-live="polite">
     <div class="upload-toast-row">
@@ -161,8 +160,8 @@
     </svg>
     <span>This site is only available on desktop computers.</span>
   </div>
-  <div class="brand ui-hidden"><a class="brand-home" href="/" aria-label="Reload PreMock home"><b>PreMock<sup class="brand-ver">v1.3.2</sup></b></a><a class="credit" href="https://www.thisisarda.com" target="_blank" rel="noopener noreferrer">by <b>Arda Arıcan</b></a></div>
-  <div class="filepill" id="filepill"><span id="filename"></span><button class="savebtn" id="saveBtn" data-tip="Save to gallery" aria-label="Save to gallery"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg></button><button class="savebtn sharebtn" id="shareBtn" data-tip="Send" aria-label="Send" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform:translate(-1px,1px)"><path d="M21.0477 3.05293C18.8697 0.707361 2.48648 6.4532 2.50001 8.551C2.51535 10.9299 8.89809 11.6617 10.6672 12.1581C11.7311 12.4565 12.016 12.7625 12.2613 13.8781C13.3723 18.9305 13.9301 21.4435 15.2014 21.4996C17.2278 21.5892 23.1733 5.342 21.0477 3.05293Z"/><path d="M11.5 12.5L15 9"/></svg></button><span class="copied-label">Copied link</span></div>
+  <div class="brand ui-hidden"><a class="brand-home" href="/" aria-label="Reload PreMock home"><b>PreMock<sup class="brand-ver">v1.4.0</sup></b></a><a class="credit" href="https://www.thisisarda.com" target="_blank" rel="noopener noreferrer">by <b>Arda Arıcan</b></a></div>
+  <div class="filepill" id="filepill"><span id="filename"></span><button class="savebtn" id="saveBtn" data-tip="Save to gallery" aria-label="Save to gallery"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg></button><button class="savebtn sharebtn" id="shareBtn" data-tip="Share" aria-label="Share" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform:translate(-1px,1px)"><path d="M21.0477 3.05293C18.8697 0.707361 2.48648 6.4532 2.50001 8.551C2.51535 10.9299 8.89809 11.6617 10.6672 12.1581C11.7311 12.4565 12.016 12.7625 12.2613 13.8781C13.3723 18.9305 13.9301 21.4435 15.2014 21.4996C17.2278 21.5892 23.1733 5.342 21.0477 3.05293Z"/><path d="M11.5 12.5L15 9"/></svg></button><span class="copied-label">Copied link</span></div>
 
   <div class="confirm-pop" id="confirmPop" role="dialog" aria-modal="true">
     <div class="confirm-card">
