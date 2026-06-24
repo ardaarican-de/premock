@@ -1,5 +1,10 @@
 const {onRequest} = require('firebase-functions/v2/https');
 
+// Open Graph share-preview functions (screenshot generator + /s/<id> OG renderer).
+const og = require('./og');
+exports.ogShot = og.ogShot;
+exports.shareOG = og.shareOG;
+
 // A real browser User-Agent: some sites (e.g. getir.com) return 403 to bot/curl requests and
 // only reveal their true framing headers to a browser-like client.
 const BROWSER_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';

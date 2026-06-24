@@ -12,6 +12,13 @@
   // Mutable geometry for the active device (set by applyDevice).
   let IMG_W,IMG_H,SCR_L,SCR_T,SCR_W,SCR_H,SCR_CX,SCR_CY,DISP_W,DISP_H,FIT;
 
+  // OG screenshot mode: the ogShot Cloud Function opens a share as premock.co/?<id>#shot to
+  // grab a clean preview. In this mode we hide all UI chrome, skip the intro/hand entrance
+  // (place the phone immediately) and raise window.__premockShotReady once the prototype has
+  // settled, so the headless browser knows exactly when to take the picture.
+  const SHOT_MODE = /(^|#|&)shot(=|&|$)/.test(location.hash);
+  if(SHOT_MODE) document.body.classList.add('shot');
+
   const unit=document.getElementById('deviceUnit');
   const mock=document.getElementById('mock');
   const frame=document.getElementById('frame');
@@ -255,6 +262,7 @@
   const introProgress=document.getElementById('introProgress');
   const introProgressBar=introProgress?introProgress.querySelector('.intro-progress-bar'):null;
   function beginEntrance(bgImage){
+    if(SHOT_MODE){ stageEntered=true; fit(); return; }   // OG capture: place the phone instantly, no intro
     if(!bgImage || !introProgress){ setTimeout(enterStage, 2400); return; }
     const credit=document.querySelector('.intro-credit');
     if(credit && credit.offsetWidth) introProgress.style.width=credit.offsetWidth+'px';   // as long as the texts
@@ -1099,6 +1107,9 @@
       if(it){ it.scene=snap; persist(); }
     },200);
   }
+  // Firebase Hosting site that serves the OG-tagged share renderer (/s/<id>). Kept on Firebase's
+  // free domain so premock.co can stay on GitHub Pages (which can't inject per-share OG tags).
+  const SHARE_BASE='https://premock-upload.web.app';
   function buildShareLink(){
     const st=sceneState();
     const p=new URLSearchParams();
@@ -1128,10 +1139,10 @@
       try{ id = await window.firebaseSaveShare(mapping); current.shareId = id; current.shareSig = sig; }
       catch(err){ console.error('Save share failed', err); }
     }
-    // Query-string form (/?id) is served by index.html with a 200 + Open Graph tags, so social
-    // previews render everywhere (a clean /id path would 404 on GitHub Pages, which some
-    // crawlers skip). Old /id links still resolve via the 404 bounce + path fallback below.
-    const link = id ? location.origin+'/?'+encodeURIComponent(id) : buildShareLink();
+    // Share via the Firebase-hosted /s/<id> renderer: it serves per-prototype Open Graph tags
+    // (the screenshot in uploads/og/<id>.png) so social previews show the actual prototype, then
+    // redirects humans to premock.co/?<id>. Without a Firebase id we fall back to the query link.
+    const link = id ? SHARE_BASE+'/s/'+encodeURIComponent(id) : buildShareLink();
     // Lock the real pixel widths so the name collapses and the label expands over the FULL
     // duration in sync — animating max-width between content-sized values avoids the dead-zone
     // wobble (pill ballooning) you get when max-width travels far past the actual content width.
@@ -1349,5 +1360,17 @@
     const shared = await applyShared();
     if(!shared) applyEmptyDefaults();
     beginEntrance(shared ? shareBgImage : null);
+    if(SHOT_MODE) signalShotReady(shared);
   })();
+
+  // Tell the headless screenshot browser when the OG preview is ready to capture: wait for the
+  // prototype iframe to load, then a short settle (Figma/animation), with a hard cap so a slow
+  // or cross-origin frame never hangs the capture. No share to open → ready almost immediately.
+  function signalShotReady(shared){
+    let done=false;
+    const ready=()=>{ if(done) return; done=true; window.__premockShotReady=true; };
+    if(!shared){ setTimeout(ready, 400); return; }
+    frame.addEventListener('load', ()=>setTimeout(ready, 2500), {once:true});
+    setTimeout(ready, 11000);   // safety cap
+  }
 })();

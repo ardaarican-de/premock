@@ -413,6 +413,9 @@
      PreMock / by Arda Arıcan brand) get captured */
   body.capturing > *:not(#scene):not(#deviceUnit):not(.brand){opacity:0!important;pointer-events:none!important;transition:none!important;}
   body.capturing .brand{opacity:1!important;transition:none!important;}
+  /* OG screenshot mode (premock.co/?<id>#shot): show only the scene + phone — no intro, dock,
+     brand, pills or toasts — so the generated preview is a clean phone-on-backdrop shot. */
+  body.shot > *:not(#scene):not(#deviceUnit){display:none!important;}
 
   /* gallery sheet */
   .sheet{position:fixed;z-index:35;left:22px;bottom:110px;transform:translateY(12px);width:max-content;max-height:62vh;overflow:auto;background:var(--glass);border:1px solid var(--glass-line);border-radius:20px;backdrop-filter:blur(16px) saturate(140%);padding:18px;opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;color:var(--text-on-glass);}
